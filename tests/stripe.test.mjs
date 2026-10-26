@@ -1,12 +1,46 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
+import Stripe from "stripe";
 import {
   contributionAmount,
   boundedRequestText,
   verifyStripeSignature,
   validatePaidCheckout,
 } from "../.sites-runtime/tests/stripe-protocol.mjs";
+
+test("the production SDK webhook verifier rejects a modified signed event without network access", async () => {
+  const stripe = new Stripe("fixture"),
+    secret = "fixture-signature",
+    timestamp = Math.floor(Date.now() / 1000);
+  const raw = JSON.stringify({
+    id: "evt_fixture",
+    object: "event",
+    type: "invoice.paid",
+    data: { object: { id: "in_fixture" } },
+  });
+  const signature = createHmac("sha256", secret)
+    .update(`${timestamp}.${raw}`)
+    .digest("hex");
+  const header = `t=${timestamp},v1=${signature}`;
+  const event = await stripe.webhooks.constructEventAsync(
+    raw,
+    header,
+    secret,
+    300,
+    Stripe.createSubtleCryptoProvider(),
+  );
+  assert.equal(event.id, "evt_fixture");
+  await assert.rejects(
+    stripe.webhooks.constructEventAsync(
+      raw + " ",
+      header,
+      secret,
+      300,
+      Stripe.createSubtleCryptoProvider(),
+    ),
+  );
+});
 test("Stripe raw signatures reject forgery, altered payloads and stale events", async () => {
   const now = Date.now(),
     t = Math.floor(now / 1000),

@@ -107,3 +107,30 @@ export const cityEvents = sqliteTable(
   },
   (table) => [index("city_events_created_at").on(table.createdAt)],
 );
+
+export const rentalSubscriptions = sqliteTable("rental_subscriptions", {
+  id: text("id").primaryKey(),
+  checkoutId: text("checkout_id").notNull().unique(),
+  expansionId: text("expansion_id").notNull(),
+  playerId: text("player_id").notNull(),
+  customerId: text("customer_id").notNull(),
+  amountCents: integer("amount_cents").notNull(),
+  status: text("status").notNull(),
+  cancelAtPeriodEnd: integer("cancel_at_period_end", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  observedAt: integer("observed_at").notNull(),
+});
+export const rentalInvoices = sqliteTable(
+  "rental_invoices",
+  {
+    id: text("id").primaryKey(),
+    subscriptionId: text("subscription_id").notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    periodStart: integer("period_start").notNull(),
+    periodEnd: integer("period_end").notNull(),
+    blocked: integer("blocked", { mode: "boolean" }).notNull().default(false),
+    observedAt: integer("observed_at").notNull().default(0),
+  },
+  (table) => [index("rental_invoices_subscription").on(table.subscriptionId)],
+);

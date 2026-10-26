@@ -132,11 +132,14 @@ export function CommunityPanel({
                       style: "currency",
                       currency: "EUR",
                     })}{" "}
-                    / 1,00 €
+                    / 1,00 €/mes
                   </span>
                   <small>
                     Alquiler conjunto de 1 €/mes. Puede pagarlo una persona o
-                    compartirse en dos aportaciones de 0,50 €/mes.
+                    compartirse en dos aportaciones de 0,50 €/mes. Cada
+                    aportación es recurrente; el terreno solo se activa al
+                    cubrir el importe conjunto. Puedes cancelar desde «Mis
+                    alquileres».
                   </small>
                   {!data.paymentsEnabled && (
                     <small>

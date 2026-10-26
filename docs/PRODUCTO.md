@@ -28,7 +28,7 @@ Solo miembros pueden solicitar ampliar su comunidad. Una solicitud por tramo, al
 
 ## Límites
 
-No están implementados reembolsos/disputas automáticos, tienda, jardines decorables ni compra de cosméticos. Antes de activar cobros hay que completar una prueba integral con Stripe, incluyendo devoluciones y recuperación de reservas ambiguas. La conexión de ChatGPT con Stripe no proporciona credenciales al Worker. El límite visual sigue siendo 250 perfiles recientes; no equivale a validar una ciudad masiva. La ciudad no se rellena con edificios ficticios. Solo se representa a propietarios verificados con parcela elegida. Buscar un perfil o vincular una cuenta sin elegir parcela no construye una casa.
+No están implementados emisión automática de reembolsos, tienda, jardines decorables ni compra de cosméticos. Los reembolsos y disputas comunicados por Stripe sí bloquean/restablecen la cobertura correspondiente tras verificarla. Antes de activar cobros hay que completar una prueba integral con Stripe, incluyendo devoluciones y recuperación de reservas ambiguas. La conexión de ChatGPT con Stripe no proporciona credenciales al Worker. El límite visual sigue siendo 250 perfiles recientes; no equivale a validar una ciudad masiva. La ciudad no se rellena con edificios ficticios. Solo se representa a propietarios verificados con parcela elegida. Buscar un perfil o vincular una cuenta sin elegir parcela no construye una casa.
 
 ## Alquileres para escuelas y clubes
 
@@ -36,4 +36,4 @@ La ampliación permite reunir alumnos o miembros en una misma comunidad. Al venc
 
 El cambio se representa con bola de demolición en el lugar anterior y obra en el destino gratuito. Elegir parcela muestra operarios, andamios y grúa; subir de etapa anima la mejora. Estas escenas duran nueve segundos y respetan la preferencia de movimiento reducido. No se activan con datos inventados ni llenan una ciudad vacía.
 
-La infraestructura de vencimientos usa fechas del servidor y registra eventos idempotentes. La conciliación automática de facturas y renovaciones de Stripe aún no está terminada; `RENTAL_LIFECYCLE_READY=false` impide abrir cobros incluso si se añaden claves. No se está vendiendo un alquiler sin seguimiento mensual fiable.
+La infraestructura de vencimientos usa fechas del servidor y registra eventos idempotentes. La conciliación automática de facturas y renovaciones de Stripe está implementada y probada con datos aislados, pero no con un sandbox del proveedor; `RENTAL_LIFECYCLE_READY=false` impide abrir cobros incluso si se añaden claves. No se está vendiendo un alquiler sin seguimiento mensual fiable.

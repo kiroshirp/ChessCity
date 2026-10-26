@@ -22,18 +22,30 @@ Producto proporcionado: `prod_U4PzEucod6LCRJ`. Verificado en la segunda cuenta T
 El código prepara aportaciones mensuales de 50 céntimos o 1 euro, reservando el importe pendiente para no superar 1 euro al mes entre todos. Para activar checkout hacen falta:
 
 - Cuenta y producto verificados.
-- `STRIPE_SECRET_KEY` guardada como secreto del Worker, nunca en Git ni en el chat.
-- Webhook hacia `https://chesscity.kiroshirp.workers.dev/api/stripe/webhook`, con los eventos checkout.session.completed y checkout.session.expired.
+- Clave restringida de Stripe guardada en `STRIPE_SECRET_KEY` como secreto del Worker, nunca en Git ni en el chat.
+- Webhook hacia `https://chesscity.kiroshirp.workers.dev/api/stripe/webhook`, con API `2026-09-30.endive` y eventos checkout.session.completed/expired/async_payment_succeeded, customer.subscription.created/updated/deleted, invoice.paid/payment_failed/finalized/voided/marked_uncollectible y charge.refunded/dispute.created/dispute.closed.
 - `STRIPE_WEBHOOK_SECRET` guardado como secreto del Worker.
 - Pruebas integrales en modo de prueba, incluida recuperación y devolución de aportaciones.
 - Activación deliberada de `STRIPE_PAYMENTS_ENABLED`; actualmente está en `false`.
 
-El origen canónico se configura mediante `CHESSCITY_PUBLIC_ORIGIN`. La autorización del plugin de Stripe sirve para gestionar la cuenta desde el chat, pero no proporciona una clave de API a la aplicación. Los reembolsos/disputas automáticos siguen pendientes, por lo que no se presentan los cobros como listos para explotación comercial.
+El origen canónico se configura mediante `CHESSCITY_PUBLIC_ORIGIN`. La autorización del plugin de Stripe sirve para gestionar la cuenta desde el chat, pero no proporciona una clave de API a la aplicación. La lógica de facturas, cancelaciones y bloqueos por reembolso/disputa está implementada y probada con datos aislados; todavía no se presenta como una integración comercial validada. No se crean reembolsos automáticamente: se verifica el estado que comunica Stripe.
 
 Referencias: https://developers.cloudflare.com/workers/ci-cd/builds/configuration/ y https://docs.stripe.com/currencies#minimum-and-maximum-charge-amounts
 
-El Worker incluye una comprobación periódica de vencimientos cada 15 minutos. Solo procesa expansiones con una fecha de alquiler pagado guardada en servidor; no se toma la fecha del cliente. Al vencer se reubica a los propietarios en parcelas gratuitas y se registra la demolición/construcción visual. Falta completar la sincronización mensual de invoices/subscriptions con Stripe antes de activar checkout.
+El Worker incluye una comprobación periódica de vencimientos cada 15 minutos. Solo procesa expansiones con una fecha de alquiler pagado guardada en servidor; no se toma la fecha del cliente. Al vencer se reubica a los propietarios en parcelas gratuitas y se registra la demolición/construcción visual. Antes de activar checkout falta probar el ciclo completo con un sandbox separado de Stripe y las credenciales del servidor. `RENTAL_LIFECYCLE_READY=false` mantiene el bloqueo aunque se añadan claves.
 
 ## Estado del enlace GitHub
 
 La publicación manual está verificada. Workers Builds ha marcado un intento automático como fallido; no equivale a que la web esté caída. La sesión OAuth disponible permite Workers y D1, pero la API de registros de compilación devuelve HTTP 403 (requiere Workers CI Read/Write). Se fija pnpm@11.25.0 en package.json para que el proveedor pueda seleccionar una versión válida del gestor. Falta confirmar el siguiente intento automático y leer sus registros si vuelve a fallar.
+
+## Conciliación mensual
+
+SDK oficial Stripe 23.0.1, API 2026-09-30.endive. No se fijan métodos de pago: Checkout los selecciona dinámicamente. La pertenencia se resuelve desde Checkout, Subscription e Invoice; los metadatos solo sirven como recuperación explícita si llega una factura antes que el aviso de Checkout.
+
+Se registra el período real del servicio indicado en la línea de factura. Una factura o notificación repetida no añade meses ni parcelas. Dos aportantes de 0,50 €/mes mantienen únicamente el tramo de tiempo pagado por ambos. Cancelar desde «Mis alquileres» detiene las próximas renovaciones al terminar el período pagado. Las reservas incluyen compromisos ya suscritos para no permitir más de 1 €/mes por ampliación.
+
+Los vencimientos consultan Stripe antes de trasladar jugadores. Una factura aún en borrador, un intento pendiente o un error del proveedor no prueba impago y no provoca una demolición. Los recibos marcados manualmente como pagados no bastan: se comprueba su pago real; los reembolsos y disputas pendientes bloquean el período afectado. Una resolución favorable verificada puede restablecerlo.
+
+Antes de abrir cobros hay que revisar también el tratamiento de impuestos. No se ha activado Stripe Tax ni se afirma que los importes estén fiscalmente configurados.
+
+Para el sandbox separado, configurar `STRIPE_PRODUCT_ID` con el producto de prueba y `CHESSCITY_PUBLIC_ORIGIN` con el origen del entorno aislado. Si no se define producto, se usa el producto real verificado de TopChess. Nunca usar una clave real en pruebas ni mezclar bases de datos entre los entornos.

@@ -38,6 +38,7 @@
     "react-resizable-panels": "^4.12.2",
     "recharts": "^3.8.0",
     "sonner": "^2.0.8",
+    "stripe": "23.0.1",
     "tailwind-merge": "3.6.0",
     "three": "0.183.0",
     "vaul": "^1.1.2",

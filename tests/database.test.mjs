@@ -1,102 +1,8 @@
+import { fixture } from "./helpers/database.mjs";
 import { demolishExpiredRentals } from "../.sites-runtime/tests/city-events.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
-import { DatabaseSync } from "node:sqlite";
 import { reserveContribution } from "../.sites-runtime/tests/checkout-store.mjs";
-import { settleVerifiedExpansionPayment } from "../.sites-runtime/tests/expansion-settlement.mjs";
-function fixture() {
-  const sql = new DatabaseSync(":memory:");
-  for (const file of readdirSync("drizzle")
-    .filter((name) => name.endsWith(".sql"))
-    .sort())
-    sql.exec(readFileSync(`drizzle/${file}`, "utf8"));
-  sql.exec(
-    "INSERT INTO communities VALUES ('alameda','Alameda',16); INSERT INTO expansions (id,community_id,created_at) VALUES ('alameda:16','alameda',0)",
-  );
-  const db = {
-    prepare(query) {
-      let args = [];
-      const stmt = {
-        bind(...values) {
-          args = values;
-          return stmt;
-        },
-        async first() {
-          return sql.prepare(query).get(...args) ?? null;
-        },
-        async all() {
-          return { results: sql.prepare(query).all(...args) };
-        },
-        async run() {
-          return { meta: { changes: sql.prepare(query).run(...args).changes } };
-        },
-      };
-      return stmt;
-    },
-    async batch(statements) {
-      sql.exec("BEGIN");
-      try {
-        const result = [];
-        for (const stmt of statements) result.push(await stmt.run());
-        sql.exec("COMMIT");
-        return result;
-      } catch (e) {
-        sql.exec("ROLLBACK");
-        throw e;
-      }
-    },
-  };
-  return { sql, db };
-}
-const payment = (id, amount = 100) => ({
-  eventId: id,
-  expansionId: "alameda:16",
-  amountCents: amount,
-  currency: "EUR",
-});
-test("100 cents total unlocks four plots once; duplicate notifications are idempotent", async () => {
-  const { sql, db } = fixture();
-  assert.equal(
-    (await settleVerifiedExpansionPayment(db, payment("one", 50))).applied,
-    false,
-  );
-  assert.equal(
-    sql.prepare("SELECT capacity FROM communities").get().capacity,
-    16,
-  );
-  assert.equal(
-    (await settleVerifiedExpansionPayment(db, payment("two", 50))).applied,
-    true,
-  );
-  assert.equal(
-    (await settleVerifiedExpansionPayment(db, payment("two", 50))).duplicate,
-    true,
-  );
-  assert.equal(
-    sql.prepare("SELECT capacity FROM communities").get().capacity,
-    20,
-  );
-  assert.equal(sql.prepare("SELECT COUNT(*) AS n FROM plots").get().n, 4);
-  await assert.rejects(settleVerifiedExpansionPayment(db, payment("two", 40)));
-  await assert.rejects(settleVerifiedExpansionPayment(db, payment("three")));
-  sql.close();
-});
-test("unverified amounts/currency cannot expand land", async () => {
-  const { sql, db } = fixture();
-  for (const p of [
-    payment("x", 0),
-    payment("x", -1),
-    payment("x", 101),
-    { ...payment("x"), currency: "USD" },
-  ])
-    await assert.rejects(settleVerifiedExpansionPayment(db, p));
-  assert.equal(
-    sql.prepare("SELECT capacity FROM communities").get().capacity,
-    16,
-  );
-  sql.close();
-});
 test("a plot has at most one owner and moving releases the old address", () => {
   const { sql } = fixture();
   sql.exec(
@@ -152,20 +58,6 @@ test("reservations never exceed 100 cents across community members", async () =>
   );
   sql.close();
 });
-test("one member can fund all four plots for exactly one euro", async () => {
-  const { sql, db } = fixture();
-  assert.equal(
-    (await settleVerifiedExpansionPayment(db, payment("full"))).applied,
-    true,
-  );
-  assert.equal(
-    sql.prepare("SELECT capacity FROM communities").get().capacity,
-    20,
-  );
-  assert.equal(sql.prepare("SELECT COUNT(*) n FROM plots").get().n, 4);
-  sql.close();
-});
-
 test("expired school plots relocate players free, preserving XP and identity, exactly once", async () => {
   const { sql, db } = fixture();
   sql.exec(

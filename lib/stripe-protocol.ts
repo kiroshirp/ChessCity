@@ -65,7 +65,7 @@ export async function verifyStripeSignature(
   throw new Error("Firma no válida.");
 }
 
-export function validatePaidCheckout(
+export function validateRentalCheckout(
   session: any,
   checkout: {
     id: string;
@@ -76,12 +76,14 @@ export function validatePaidCheckout(
   },
   lines: any,
   live: boolean,
+  requirePaid = true,
+  productId = STRIPE_PRODUCT_ID,
 ) {
   if (
     session.id !== checkout.session_id ||
     session.mode !== "subscription" ||
     session.status !== "complete" ||
-    session.payment_status !== "paid" ||
+    (requirePaid && session.payment_status !== "paid") ||
     session.currency !== "eur" ||
     session.amount_total !== checkout.amount_cents ||
     session.livemode !== live ||
@@ -92,9 +94,11 @@ export function validatePaidCheckout(
     !Array.isArray(lines?.data) ||
     lines.has_more ||
     lines.data.length !== 1 ||
-    lines.data[0].price?.product !== STRIPE_PRODUCT_ID ||
+    lines.data[0].price?.product !== productId ||
     lines.data[0].quantity !== 1 ||
     lines.data[0].amount_total !== checkout.amount_cents
   )
     throw new Error("El pago no corresponde a esta aportación.");
 }
+
+export const validatePaidCheckout = validateRentalCheckout;

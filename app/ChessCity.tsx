@@ -1,4 +1,5 @@
 "use client";
+import MyRentalsPanel from "./MyRentalsPanel";
 import type { CityEvent } from "../lib/city-events";
 
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
@@ -41,6 +42,7 @@ type Dialog =
   | "customize"
   | "credits"
   | "compare"
+  | "rentals"
   | "communities"
   | "plot"
   | null;
@@ -461,6 +463,11 @@ export default function ChessCity() {
           </button>
         </form>
         <div className="top-actions">
+          {me && (
+            <button className="text-link" onClick={() => setDialog("rentals")}>
+              Mis alquileres
+            </button>
+          )}
           <span className="lichess-label">
             <i /> Datos de Lichess
           </span>
@@ -865,6 +872,7 @@ export default function ChessCity() {
                 </div>
               </>
             )}
+            {dialog === "rentals" && <MyRentalsPanel />}
             {dialog === "communities" && (
               <>
                 <CommunityPanel

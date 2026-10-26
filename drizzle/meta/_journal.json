@@ -36,6 +36,20 @@
       "when": 1793046067768,
       "tag": "0004_event_index",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1793047231439,
+      "tag": "0005_monthly_rental_billing",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1793048688665,
+      "tag": "0006_invoice_observations",
+      "breakpoints": true
     }
   ]
 }

@@ -118,3 +118,15 @@ assert.equal(
 console.log(
   "HTTP OK: 48 initial plots, protected placement/expansions, payments disabled.",
 );
+
+assert.equal((await request("/api/rentals")).status, 401);
+assert.equal(
+  (
+    await request("/api/rentals", {
+      method: "POST",
+      headers: { Origin: origin },
+      body: "{}",
+    })
+  ).status,
+  401,
+);

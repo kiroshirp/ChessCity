@@ -21,3 +21,5 @@ TopChess is credited as supporting the project at the user's explicit request. T
 Corresponding application source is available from the in-app Credits dialog at `/source/chesscity.tar.gz`, alongside the license at `/LICENSE.txt`. The archive excludes credentials, databases, dependencies and generated runtime state.
 
 El repositorio GitHub original contenía únicamente un README y una licencia MIT. Esa licencia se conserva en `LICENSE.repository-original`. La aplicación derivada de Git City se distribuye bajo la licencia AGPL indicada arriba; conservar la licencia inicial no cambia la licencia de estos componentes derivados.
+
+The Stripe Node.js SDK (23.0.1) is used server-side for Checkout, subscriptions and webhook verification. It is distributed under the MIT license; see `vendor/stripe.LICENSE`. Stripe is a payment provider, not a claimed sponsor of ChessCity.

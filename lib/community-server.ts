@@ -1,11 +1,10 @@
 import { database, ApiError } from "./server";
-import { stripeEnabled } from "./stripe-server";
+import { stripeEnabled, stripeProductId } from "./stripe-server";
 import {
   NEIGHBORHOODS,
   plotCoordinates,
   EXPANSION_PRICE_CENTS,
   EXPANSION_SLOTS,
-  STRIPE_PRODUCT_ID,
   MAX_COMMUNITY_SLOTS,
 } from "./neighborhoods";
 
@@ -54,7 +53,7 @@ export async function listNeighborhoods() {
     plots: plots.results,
     expansions: expansions.results,
     paymentsEnabled: stripeEnabled(),
-    stripeProductId: STRIPE_PRODUCT_ID,
+    stripeProductId: stripeProductId(),
   };
 }
 

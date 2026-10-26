@@ -2,9 +2,9 @@
 
 ## Comprobaciones realizadas
 
-- 28 pruebas de dominio y SQLite superadas: normalización, límites de crecimiento, exclusión del historial, media de puntuaciones, coordenadas, propiedad exclusiva y liquidación idempotente del objetivo conjunto de 100 céntimos.
+- 38 pruebas de dominio y SQLite superadas: normalización, límites de crecimiento, exclusión del historial, media de puntuaciones, coordenadas, propiedad exclusiva y liquidación idempotente del objetivo conjunto de 100 céntimos.
 - TypeScript sin errores y compilación completa satisfactoria. Three.js mantiene un bloque superior a 500 kB; falta medir rendimiento en dispositivos modestos.
-- Cinco migraciones aplicadas correctamente a la nueva base D1 de ChessCity en Cloudflare.
+- Siete migraciones aplicadas correctamente a la nueva base D1 de ChessCity en Cloudflare.
 - HTTP en la web Cloudflare publicada: ciudad, sesión anónima/falsificada, PKCE, estado OAuth inválido, origen ajeno, 48 parcelas iniciales, operaciones protegidas y checkout desactivado.
 - Navegador local: tres comunidades con 16 plazas, elección desde lista y desde una parcela iluminada del mapa, aviso de vinculación para visitantes, tejados pequeños y haz de selección.
 
@@ -18,4 +18,12 @@ Las pruebas de Stripe cubren firma HMAC, rechazo de cuerpo alterado o caducado, 
 
 La ciudad de producción ya no usa maquetas: la selección de residentes exige cuenta verificada y parcela. Se ha añadido una prueba que evita construir edificios al consultar perfiles o vincular cuentas sin parcela. La interfaz adopta las referencias aportadas: carbón, marfil, bordes oscuros y controles elevados.
 
-Pruebas adicionales: fin de alquiler, reubicación gratuita sin pérdida de progreso, idempotencia del vencimiento, finalización de animaciones y movimiento reducido. La grúa y la bola se revisaron en una escena local aislada, sin usuarios ficticios en producción. La integración mensual con Stripe permanece bloqueada expresamente hasta completar facturas y renovaciones.
+Pruebas adicionales: fin de alquiler, reubicación gratuita sin pérdida de progreso, idempotencia del vencimiento, finalización de animaciones y movimiento reducido. La grúa y la bola se revisaron en una escena local aislada, sin usuarios ficticios en producción. La integración mensual con Stripe permanece bloqueada expresamente hasta probar el ciclo completo en un sandbox separado.
+
+## Ampliación de pruebas de Stripe
+
+Se sustituyó el liquidador inicial de pagos puntuales por un registro mensual de suscripciones y facturas; la tabla histórica se conserva. Las pruebas verifican períodos reales, renovaciones sin duplicados, dos aportaciones mensuales de 50 céntimos, cancelación al fin del período, bloqueo por reembolso, recuperación verificada, identidad inmutable, reservas que incluyen compromisos ya suscritos, rechazo de facturas sin pago real y firma con el SDK oficial. No se han creado pagos, suscripciones ni reembolsos en Stripe real.
+
+La verificación integral de Checkout, cobro, renovación y entrega de webhooks desde un sandbox de Stripe sigue pendiente. La conexión del chat a Stripe no instala credenciales en el Worker. El pago permanece bloqueado por configuración y por la guarda de validación integral.
+
+También se verifica que una observación de pago atrasada no deshace un reembolso posterior; las observaciones de cobertura se ordenan por su instante de consulta.

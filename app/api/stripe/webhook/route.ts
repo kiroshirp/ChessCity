@@ -1,11 +1,11 @@
+import Stripe from "stripe";
 import { env } from "cloudflare:workers";
-import { database, json, failure, ApiError } from "../../../../lib/server";
+import { json, failure, ApiError } from "../../../../lib/server";
+import { boundedRequestText } from "../../../../lib/stripe-protocol";
 import {
-  verifyStripeSignature,
-  boundedRequestText,
-} from "../../../../lib/stripe-protocol";
-import { reconcileCheckout } from "../../../../lib/stripe-server";
-import type { CheckoutRow } from "../../../../lib/checkout-store";
+  stripeClient,
+  handleRentalStripeEvent,
+} from "../../../../lib/stripe-server";
 export async function POST(request: Request) {
   try {
     if (!env.STRIPE_WEBHOOK_SECRET || !env.STRIPE_SECRET_KEY)
@@ -16,37 +16,21 @@ export async function POST(request: Request) {
     } catch {
       throw new ApiError("Evento demasiado grande.", 413);
     }
+    let event: Stripe.Event;
     try {
-      await verifyStripeSignature(
+      event = await stripeClient().webhooks.constructEventAsync(
         raw,
-        request.headers.get("stripe-signature"),
+        request.headers.get("stripe-signature") ?? "",
         env.STRIPE_WEBHOOK_SECRET,
+        300,
+        Stripe.createSubtleCryptoProvider(),
       );
     } catch {
       throw new ApiError("Firma no válida.", 400);
     }
-    let event;
-    try {
-      event = JSON.parse(raw);
-    } catch {
-      throw new ApiError("Evento no válido.");
-    }
-    if (
-      [
-        "checkout.session.completed",
-        "checkout.session.expired",
-        "checkout.session.async_payment_succeeded",
-      ].includes(event.type)
-    ) {
-      const id = event.data?.object?.id;
-      if (typeof id !== "string") throw new ApiError("Sesión no válida.");
-      const checkout = await database()
-        .prepare("SELECT * FROM expansion_checkouts WHERE session_id=?")
-        .bind(id)
-        .first<CheckoutRow>();
-      // Do not apply unrelated products or sessions created outside this application.
-      if (checkout) await reconcileCheckout(checkout);
-    }
+    if (event.livemode !== /^(sk|rk)_live_/.test(env.STRIPE_SECRET_KEY))
+      throw new ApiError("Modo de Stripe no válido.", 400);
+    await handleRentalStripeEvent(event);
     return json({ received: true });
   } catch (error) {
     return failure(error);

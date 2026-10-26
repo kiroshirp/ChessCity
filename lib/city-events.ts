@@ -55,7 +55,11 @@ export async function queueConstruction(
 }
 
 /** Server-owned expiry only. Never accepts an expiry date asserted by a browser. */
-export async function demolishExpiredRentals(db: D1Database, now = Date.now()) {
+export async function demolishExpiredRentals(
+  db: D1Database,
+  now = Date.now(),
+  verifiedExpansions?: Set<string>,
+) {
   const rentals = await db
     .prepare(
       "SELECT id,rent_paid_until FROM expansions WHERE status='applied' AND rent_paid_until IS NOT NULL AND rent_paid_until<=?",
@@ -63,6 +67,7 @@ export async function demolishExpiredRentals(db: D1Database, now = Date.now()) {
     .bind(now)
     .all<{ id: string; rent_paid_until: number }>();
   for (const rental of rentals.results) {
+    if (verifiedExpansions && !verifiedExpansions.has(rental.id)) continue;
     const rows = await db
       .prepare(
         `SELECT p.*,l.x AS plot_x,l.z AS plot_z,l.community_id FROM players p JOIN plots l ON p.plot_id=l.id WHERE l.rental_expansion_id=?`,
@@ -154,7 +159,7 @@ export async function demolishExpiredRentals(db: D1Database, now = Date.now()) {
       ),
       db
         .prepare(
-          "UPDATE expansions SET status='awaiting_payment',paid_cents=0,rent_paid_until=NULL WHERE id=? AND status='applied' AND rent_paid_until<=?",
+          "UPDATE expansions SET status='awaiting_payment',rent_paid_until=NULL WHERE id=? AND status='applied' AND rent_paid_until<=?",
         )
         .bind(rental.id, now),
     );

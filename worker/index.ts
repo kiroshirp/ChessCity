@@ -1,4 +1,4 @@
-import { demolishExpiredRentals } from "../lib/city-events";
+import { reconcileDueRentals } from "../lib/stripe-server";
 import handler from "vinext/server/fetch-handler";
 import { runWithConnectorBinding } from "../lib/connector-context";
 import type { ConnectorBinding } from "../lib/connector-contract.mjs";
@@ -9,9 +9,9 @@ const worker = {
     env: Cloudflare.Env,
     ctx: ExecutionContext,
   ) {
-    if (env.DB) ctx.waitUntil(demolishExpiredRentals(env.DB));
+    if (env.DB) ctx.waitUntil(reconcileDueRentals());
   },
-  fetch(
+  async fetch(
     request: Request,
     env: Cloudflare.Env,
     ctx: ExecutionContext<{ CONNECTORS?: ConnectorBinding }>,
@@ -39,9 +39,26 @@ const worker = {
         },
       };
     }
-    return runWithConnectorBinding(binding, () =>
+    const response = await runWithConnectorBinding(binding, () =>
       handler.fetch(request, env, ctx),
     );
+    if (
+      import.meta.env.DEV ||
+      !response.headers.get("content-type")?.includes("text/html")
+    )
+      return response;
+    const headers = new Headers(response.headers);
+    headers.set(
+      "Content-Security-Policy",
+      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://*.stripe.com; frame-src https://*.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com https://lichess.org; frame-ancestors 'none'",
+    );
+    headers.set("X-Content-Type-Options", "nosniff");
+    headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
   },
 };
 
