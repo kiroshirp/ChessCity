@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     if (
       !body ||
       typeof body.plotId !== "string" ||
-      !/^(alameda|mirador|ribera|libre):\d{1,6}$/.test(body.plotId)
+      !/^(alameda|mirador|ribera|libre|abierta):\d{1,6}$/.test(body.plotId)
     )
       throw new ApiError("Parcela no válida.");
     const plot = await database()

@@ -44,8 +44,9 @@ export function CommunityPanel({
       <div className="eyebrow">UN LUGAR PARA CRECER JUNTOS</div>
       <h2 id="dialog-title">Comunidades de ChessCity</h2>
       <p>
-        Elige una parcela libre. Tu dirección se conserva al entrar nuevos
-        jugadores y tu edificio crecerá en el mismo lugar.
+        Explora Ciudad abierta y elige tu parcela gratuita en el mapa. El
+        terreno público crece cuando hace falta espacio. También puedes vivir
+        junto a tu club o escuela en una comunidad.
       </p>
       {!me && (
         <p className="panel-note">
@@ -115,15 +116,16 @@ export function CommunityPanel({
                   </option>
                 ))}
               </select>
-              {own && community.id !== "libre" && (
-                <button
-                  className="secondary full"
-                  onClick={onExpand}
-                  disabled={busy || community.capacity >= 64}
-                >
-                  Solicitar ampliación · 1 €/mes en total
-                </button>
-              )}
+              {own &&
+                NEIGHBORHOODS.some((item) => item.id === community.id) && (
+                  <button
+                    className="secondary full"
+                    onClick={onExpand}
+                    disabled={busy || community.capacity >= 64}
+                  >
+                    Solicitar ampliación · 1 €/mes en total
+                  </button>
+                )}
               {campaign && (
                 <div className="campaign">
                   <b>Ampliación de {campaign.addedSlots} plazas</b>

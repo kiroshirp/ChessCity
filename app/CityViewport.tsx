@@ -77,13 +77,13 @@ export default function CityViewport({
     container.appendChild(renderer.domElement);
     const layout = createLayout(players, mode);
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(39, 1, 0.5, 700);
+    const camera = new THREE.PerspectiveCamera(39, 1, 0.5, 4000);
     camera.position.set(225, 190, 250);
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.09;
     controls.minDistance = 35;
-    controls.maxDistance = 600;
+    controls.maxDistance = 1600;
     controls.maxPolarAngle = Math.PI * 0.47;
     controls.minPolarAngle = 0.2;
     controls.target.set(0, 12, 0);
@@ -127,15 +127,16 @@ export default function CityViewport({
     materials.push(lightMat);
     const worldExtent = Math.max(
       500,
-      ...layout.flatMap((b) => [
+      ...[...layout, ...plots].flatMap((b) => [
         Math.abs(b.x) * 2 + 100,
         Math.abs(b.z) * 2 + 100,
       ]),
     );
     box(0, -1.2, 0, worldExtent, 2, worldExtent, groundMat);
-    for (let n = -13; n <= 13; n++) {
-      box(n * 16 + 8, 0.05, 0, 3, 0.12, 450, roadMat);
-      box(0, 0.06, n * 16 + 8, 450, 0.12, 3, roadMat);
+    const roadRadius = Math.ceil(worldExtent / 32);
+    for (let n = -roadRadius; n <= roadRadius; n++) {
+      box(n * 16 + 8, 0.05, 0, 3, 0.12, worldExtent, roadMat);
+      box(0, 0.06, n * 16 + 8, worldExtent, 0.12, 3, roadMat);
       for (let p = -13; p <= 13; p++) {
         if (Math.abs(n) <= 6 && Math.abs(p) <= 6 && (n + p) % 7 === 0) {
           box(n * 16 + 5.8, 1.7, p * 16 + 5.8, 0.22, 3.4, 0.22, curbMat);

@@ -4,7 +4,7 @@ ChessCity está publicado en https://chesscity.kiroshirp.workers.dev, con su pro
 
 ## Despliegue
 
-El comando predeterminado de Workers Builds, `npx wrangler deploy`, ejecuta la preparación declarada en `wrangler.jsonc`: genera el archivo de código fuente, compila y aplica las migraciones pendientes antes de subir el Worker. No requiere definir CHESSCITY_D1_ID manualmente. Se necesita que la conexión de Cloudflare tenga permisos Workers y D1.
+Workers Builds debe tener `node scripts/cloudflare-build.mjs` como comando de compilación, tanto en Producción como en Base de vistas previas. Producción usa `node scripts/cloudflare-deploy.mjs` como comando de despliegue; las ramas de vista previa usan `npx wrangler preview --config dist/server/wrangler.json`. La compilación genera el archivo de código fuente y los archivos de cliente/servidor. El despliegue de producción aplica las migraciones pendientes. No requiere definir CHESSCITY_D1_ID manualmente. Se necesita que la conexión de Cloudflare tenga permisos Workers y D1.
 
 Para un despliegue manual con sesión autorizada:
 
@@ -36,7 +36,7 @@ El Worker incluye una comprobación periódica de vencimientos cada 15 minutos. 
 
 ## Estado del enlace GitHub
 
-La publicación manual está verificada. Workers Builds ha marcado un intento automático como fallido; no equivale a que la web esté caída. La sesión OAuth disponible permite Workers y D1, pero la API de registros de compilación devuelve HTTP 403 (requiere Workers CI Read/Write). Se fija pnpm@11.25.0 en package.json para que el proveedor pueda seleccionar una versión válida del gestor. Falta confirmar el siguiente intento automático y leer sus registros si vuelve a fallar.
+La publicación manual está verificada. El panel autenticado permitió identificar el fallo automático: las ramas ejecutaban `wrangler preview` sin compilación previa y faltaba `dist/client`. Se han configurado explícitamente compilación y despliegue tanto para Producción como para Base de vistas previas. Reintentar una compilación antigua reutiliza su configuración anterior: la comprobación debe hacerse con un nuevo commit. pnpm está fijado a 11.25.0. La API local de registros sigue sin permiso Workers CI, aunque el panel sí permite leerlos.
 
 ## Conciliación mensual
 

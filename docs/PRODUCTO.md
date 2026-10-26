@@ -22,7 +22,9 @@ Se exigen ambos mínimos. El rating no cambia la altura. Jardín desde la segund
 
 ## Parcelas y ampliaciones
 
-Tres comunidades iniciales de 16 parcelas: Alameda, El Mirador y La Ribera. Elegir o cambiar a una parcela libre es gratuito en esta versión. La dirección elegida es persistente, con ocupación exclusiva protegida en base de datos. Los perfiles sin parcela usan una distribución provisional que puede cambiar.
+Ciudad abierta ofrece 256 parcelas públicas iniciales, sin alquiler. Cuando quedan menos de 64 libres, el servidor añade otro bloque de 256 direcciones permanentes. El terreno y las calles se adaptan a su extensión. No se añaden jugadores ni edificios ficticios. Las direcciones públicas respetan la plaza y todo el espacio reservado para las futuras ampliaciones de las comunidades.
+
+Alameda, El Mirador y La Ribera tienen 16 parcelas iniciales cada una. Elegir o cambiar a una parcela libre es gratuito. La dirección elegida es persistente, con ocupación exclusiva protegida en base de datos. Un perfil sin parcela no aparece como edificio en la ciudad. El terreno público permite seguir jugando sin tener que alquilar una ampliación de club.
 
 Solo miembros pueden solicitar ampliar su comunidad. Una solicitud por tramo, alquiler conjunto de 100 céntimos al mes y 4 parcelas adicionales, máximo 64 por comunidad en esta versión. Stripe está preparado con el producto `prod_U4PzEucod6LCRJ`, pero los cobros permanecen desactivados hasta completar la conciliación mensual y configurar secretos. Una persona o club puede asumir 1 €/mes, o dos personas 0,50 €/mes cada una. El servidor reserva los importes pendientes para que varios participantes no superen el objetivo de 1 €. La vuelta desde Stripe no acredita fondos: el webhook firmado y la consulta a Stripe verifican sesión, producto, importe, moneda y destinatario.
 

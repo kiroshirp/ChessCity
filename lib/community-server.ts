@@ -1,4 +1,5 @@
 import { database, ApiError } from "./server";
+import { ensurePublicLand } from "./public-land";
 import { stripeEnabled, stripeProductId } from "./stripe-server";
 import {
   NEIGHBORHOODS,
@@ -35,6 +36,7 @@ export async function ensureNeighborhoods() {
 
 export async function listNeighborhoods() {
   await ensureNeighborhoods();
+  await ensurePublicLand(database());
   const [communities, plots, expansions] = await database().batch([
     database()
       .prepare(`SELECT c.id,c.name,SUM(CASE WHEN l.rental_expansion_id IS NULL OR EXISTS (SELECT 1 FROM expansions e WHERE e.id=l.rental_expansion_id AND e.status='applied' AND e.rent_paid_until>${Date.now()}) THEN 1 ELSE 0 END) AS capacity,COUNT(p.id) AS occupied FROM communities c
@@ -71,7 +73,7 @@ export async function requestExpansion(playerId: string) {
       "Primero elige una parcela para pertenecer a una comunidad.",
       409,
     );
-  if (member.id === "libre")
+  if (!NEIGHBORHOODS.some((community) => community.id === member.id))
     throw new ApiError(
       "La zona libre no admite alquileres de ampliación.",
       409,
