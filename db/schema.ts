@@ -1,0 +1,83 @@
+import {
+  sqliteTable,
+  text,
+  integer,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
+
+export const players = sqliteTable(
+  "players",
+  {
+    id: text("id").primaryKey(),
+    username: text("username").notNull(),
+    profile: text("profile").notNull(),
+    xp: integer("xp").notNull().default(0),
+    accent: text("accent").notNull().default("jade"),
+    roof: text("roof").notNull().default("antenna"),
+    claimed: integer("claimed").notNull().default(0),
+    updatedAt: integer("updated_at").notNull(),
+    buildingXp: integer("building_xp").notNull().default(0),
+    activeDays: integer("active_days").notNull().default(0),
+    ratedBaseline: integer("rated_baseline"),
+    progressDay: text("progress_day"),
+    dailyGames: integer("daily_games").notNull().default(0),
+    progressStartedAt: integer("progress_started_at"),
+    plotId: text("plot_id"),
+  },
+  (table) => [uniqueIndex("players_plot_unique").on(table.plotId)],
+);
+
+export const communities = sqliteTable("communities", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  capacity: integer("capacity").notNull().default(16),
+});
+export const plots = sqliteTable(
+  "plots",
+  {
+    id: text("id").primaryKey(),
+    communityId: text("community_id").notNull(),
+    slot: integer("slot").notNull(),
+    x: integer("x").notNull(),
+    z: integer("z").notNull(),
+  },
+  (table) => [
+    uniqueIndex("plots_community_slot").on(table.communityId, table.slot),
+  ],
+);
+export const expansions = sqliteTable("expansions", {
+  id: text("id").primaryKey(),
+  communityId: text("community_id").notNull(),
+  addedSlots: integer("added_slots").notNull().default(16),
+  goalCents: integer("goal_cents").notNull().default(100),
+  paidCents: integer("paid_cents").notNull().default(0),
+  status: text("status").notNull().default("awaiting_payment"),
+  createdAt: integer("created_at").notNull(),
+  appliedAt: integer("applied_at"),
+});
+export const payments = sqliteTable("expansion_payments", {
+  eventId: text("event_id").primaryKey(),
+  expansionId: text("expansion_id").notNull(),
+  amountCents: integer("amount_cents").notNull(),
+  currency: text("currency").notNull(),
+  refundedCents: integer("refunded_cents").notNull().default(0),
+  receivedAt: integer("received_at").notNull(),
+});
+
+export const sessions = sqliteTable("sessions", {
+  hash: text("hash").primaryKey(),
+  playerId: text("player_id").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+});
+
+export const oauth = sqliteTable("oauth", {
+  hash: text("hash").primaryKey(),
+  verifier: text("verifier").notNull(),
+  redirectUri: text("redirect_uri").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+});
+
+export const limits = sqliteTable("limits", {
+  key: text("key").primaryKey(),
+  nextAt: integer("next_at").notNull(),
+});
