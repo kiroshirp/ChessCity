@@ -33,3 +33,7 @@ El origen canónico se configura mediante `CHESSCITY_PUBLIC_ORIGIN`. La autoriza
 Referencias: https://developers.cloudflare.com/workers/ci-cd/builds/configuration/ y https://docs.stripe.com/currencies#minimum-and-maximum-charge-amounts
 
 El Worker incluye una comprobación periódica de vencimientos cada 15 minutos. Solo procesa expansiones con una fecha de alquiler pagado guardada en servidor; no se toma la fecha del cliente. Al vencer se reubica a los propietarios en parcelas gratuitas y se registra la demolición/construcción visual. Falta completar la sincronización mensual de invoices/subscriptions con Stripe antes de activar checkout.
+
+## Estado del enlace GitHub
+
+La publicación manual está verificada. Workers Builds ha marcado un intento automático como fallido; no equivale a que la web esté caída. La sesión OAuth disponible permite Workers y D1, pero la API de registros de compilación devuelve HTTP 403 (requiere Workers CI Read/Write). Se fija pnpm@11.25.0 en package.json para que el proveedor pueda seleccionar una versión válida del gestor. Falta confirmar el siguiente intento automático y leer sus registros si vuelve a fallar.

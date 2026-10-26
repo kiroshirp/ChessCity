@@ -74,5 +74,5 @@
     }
   },
   "license": "AGPL-3.0-only",
-  "packageManager": "pnpm"
+  "packageManager": "pnpm@11.25.0"
 }

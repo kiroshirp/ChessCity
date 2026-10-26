@@ -12,7 +12,7 @@ Tu trayectoria en Lichess, convertida en una ciudad. **Con el soporte de TopChes
 
 ## Funciones
 
-Ciudad 3D, selección con haz de luz, OAuth Lichess PKCE, media de puntuaciones consolidadas, crecimiento desde casita por actividad nueva, parcelas persistentes y comunidades con capacidad limitada. Solicitudes de ampliación de **1 €/mes total** por 4 plazas. Stripe está preparado para aportaciones mensuales de 0,50 € o 1 €, con cobros desactivados hasta verificar la cuenta y completar la configuración.
+Ciudad 3D, selección con haz de luz, OAuth Lichess PKCE, media de puntuaciones consolidadas, crecimiento desde casita por actividad nueva, parcelas persistentes y comunidades con capacidad limitada. Solicitudes de ampliación de **1 €/mes total** por 4 plazas. Stripe está preparado para aportaciones mensuales de 0,50 € o 1 €, con cobros desactivados hasta completar la conciliación de facturas y renovaciones.
 
 ## Desarrollo local
 
