@@ -1,3 +1,4 @@
+import { queueConstruction } from "../../../lib/city-events";
 import {
   ApiError,
   database,
@@ -25,28 +26,44 @@ export async function POST(request: Request) {
     if (
       !body ||
       typeof body.plotId !== "string" ||
-      !/^(alameda|mirador|ribera):\d{1,2}$/.test(body.plotId)
+      !/^(alameda|mirador|ribera|libre):\d{1,6}$/.test(body.plotId)
     )
       throw new ApiError("Parcela no válida.");
     const plot = await database()
-      .prepare("SELECT id FROM plots WHERE id=?")
-      .bind(body.plotId)
+      .prepare(
+        "SELECT l.id FROM plots l LEFT JOIN expansions e ON e.id=l.rental_expansion_id WHERE l.id=? AND (l.rental_expansion_id IS NULL OR (e.status='applied' AND e.rent_paid_until>?))",
+      )
+      .bind(body.plotId, Date.now())
       .first();
     if (!plot)
       throw new ApiError("Esta parcela todavía no está desbloqueada.", 409);
+    const previous = await findPlayer(user.player_id);
     const result = await database()
       .prepare(
         `UPDATE players SET plot_id=? WHERE id=? AND claimed=1
+    AND EXISTS (SELECT 1 FROM plots l LEFT JOIN expansions e ON e.id=l.rental_expansion_id WHERE l.id=? AND (l.rental_expansion_id IS NULL OR (e.status='applied' AND e.rent_paid_until>?)))
     AND NOT EXISTS (SELECT 1 FROM players other WHERE other.plot_id=? AND other.id<>?)`,
       )
-      .bind(body.plotId, user.player_id, body.plotId, user.player_id)
+      .bind(
+        body.plotId,
+        user.player_id,
+        body.plotId,
+        Date.now(),
+        body.plotId,
+        user.player_id,
+      )
       .run();
     if (!result.meta.changes)
       throw new ApiError(
         "Otro jugador ha ocupado esa parcela. Elige otra.",
         409,
       );
-    return json({ player: await findPlayer(user.player_id) });
+    const player = (await findPlayer(user.player_id))!;
+    const event =
+      previous?.plot?.id !== player.plot?.id
+        ? await queueConstruction(database(), player, "construction")
+        : null;
+    return json({ player, event });
   } catch (error) {
     return failure(error);
   }

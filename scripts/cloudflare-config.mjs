@@ -1,3 +1,15 @@
+import { readFileSync } from "node:fs";
+import ts from "typescript";
+export function productionDatabaseId() {
+  return validateDatabaseId(
+    ts
+      .parseConfigFileTextToJson(
+        "wrangler.jsonc",
+        readFileSync("wrangler.jsonc", "utf8"),
+      )
+      .config.d1_databases?.find((item) => item.binding === "DB")?.database_id,
+  );
+}
 export function validateDatabaseId(value) {
   if (
     typeof value !== "string" ||
@@ -7,7 +19,7 @@ export function validateDatabaseId(value) {
     value === "00000000-0000-4000-8000-000000000000"
   ) {
     throw new Error(
-      "Falta CHESSCITY_D1_ID: configura el identificador real de la base D1 en las variables de compilación de Cloudflare. No es una clave secreta.",
+      "Falta un identificador D1 válido en wrangler.jsonc. No es una clave secreta.",
     );
   }
   return value;

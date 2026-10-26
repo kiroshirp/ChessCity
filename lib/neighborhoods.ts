@@ -1,7 +1,8 @@
 export const EXPANSION_PRICE_CENTS = 100;
-export const EXPANSION_SLOTS = 16;
+export const EXPANSION_SLOTS = 4;
 export const MAX_COMMUNITY_SLOTS = 64;
-export const PAYMENTS_ENABLED = false;
+export const STRIPE_PRODUCT_ID = "prod_U4PzEucod6LCRJ";
+export const CONTRIBUTION_AMOUNTS = [50, 100] as const;
 export const NEIGHBORHOODS = [
   {
     id: "alameda",
@@ -35,6 +36,7 @@ export interface Plot {
   x: number;
   z: number;
   ownerId: string | null;
+  available?: boolean;
 }
 export interface Community {
   id: string;
@@ -48,6 +50,7 @@ export interface Expansion {
   addedSlots: number;
   goalCents: number;
   paidCents: number;
+  reservedCents?: number;
   status: string;
 }
 export function plotCoordinates(communityId: string, slot: number) {

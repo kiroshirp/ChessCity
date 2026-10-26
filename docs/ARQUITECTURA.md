@@ -34,4 +34,14 @@ Ver `NOTICE.md`. El archivo público `/source/chesscity.tar.gz` contiene el cód
 
 ## Comunidades y cobros
 
-`lib/neighborhoods.ts` define capacidades y coordenadas; `lib/community-server.ts` crea los registros iniciales y solicitudes. Una restricción única en `players.plot_id` evita doble ocupación. `lib/expansion-settlement.ts` contiene el punto interno de integración con futuros recibos verificados. No es una ruta HTTP ni verifica firmas de proveedor: no se debe activar checkout hasta completar esa integración. `/api/checkout` responde 503.
+`lib/neighborhoods.ts` define capacidades y coordenadas; `lib/community-server.ts` crea los registros iniciales y solicitudes. Una restricción única en `players.plot_id` evita doble ocupación. Cada ampliación añade 4 plazas por 100 céntimos en total.
+
+`lib/checkout-store.ts` reserva aportaciones de 50 o 100 céntimos con un único INSERT condicional en D1. Las reservas abiertas no se liberan por una redirección del navegador ni por su reloj: se consulta su estado en Stripe. Los reintentos de creación reutilizan la clave de idempotencia. Si un resultado ambiguo excede 23 horas, se retiene para revisión en vez de arriesgar otro cobro.
+
+`lib/stripe-protocol.ts` verifica HMAC sobre el cuerpo original y valida producto, sesión, importe, moneda, modo y propietario. `lib/stripe-server.ts` consulta Stripe desde el servidor y aplica recibos idempotentes por ID de sesión. El webhook no acepta afirmaciones de pago del cliente. El despliegue mantiene `STRIPE_PAYMENTS_ENABLED=false`; sin secretos y origen canónico no se abre checkout. No se ha completado una prueba integral con Stripe ni implementado el tratamiento automático de disputas/reembolsos.
+
+## Animaciones y vencimientos
+
+`lib/city-events.ts` registra obras y mejoras reales, y reubica al vencer un alquiler conservando el perfil del alumno. Se generan dos eventos: demolición en origen y obra en una parcela gratuita. La operación es transaccional e idempotente, con una zona gratuita de reserva si todas las parcelas iniciales están ocupadas. El Worker comprueba vencimientos cada quince minutos.
+
+`app/city-animation.ts` usa geometrías compartidas y elementos temporales para grúa, bola, operarios y andamios. El render continuo solo se mantiene durante las animaciones; se vuelve a dibujar bajo demanda al terminar. Los eventos recientes se consultan cada quince segundos en pestañas visibles; si no cambian los datos no se reconstruye la escena. La reconciliación mensual de Stripe todavía no habilita cobros.

@@ -1336,3 +1336,420 @@ select {
     gap: 4px;
   }
 }
+
+/* Interfaz TopChess: carbón, marfil y controles con relieve. */
+:root {
+  --bg: #1a191f;
+  --panel: #252429;
+  --line: #403943;
+  --mint: #f1f0ec;
+  --text: #f5f4f0;
+  --muted: #aaa6b4;
+  --gold: #d8d5cb;
+  --surface-low: #1d1b21;
+  --surface-high: #2c2a31;
+  --edge: #0d0c10;
+  --raised: 0 6px 0 var(--edge), inset 0 1px 0 #ffffff0c;
+}
+body {
+  background: var(--bg);
+}
+.chesscity {
+  font-family: Arial, "Segoe UI", sans-serif;
+}
+.topbar {
+  background: #1a191ff5;
+  border-bottom: 2px solid var(--edge);
+}
+.brand,
+.brand-light,
+.brand-icon,
+.brand small {
+  color: var(--text);
+}
+.brand small,
+.lichess-label,
+.eyebrow,
+.sponsor {
+  color: var(--muted);
+}
+.lichess-label i,
+.eyebrow i {
+  background: var(--text);
+  box-shadow: none;
+}
+.search {
+  background: var(--surface-low);
+  border: 2px solid var(--edge);
+  border-radius: 15px;
+  height: 48px;
+  box-shadow: inset 0 3px 0 #0003;
+}
+.search input {
+  color: var(--text);
+  font-size: 12px;
+}
+.search input::placeholder {
+  color: var(--muted);
+}
+.search > span,
+.search button,
+.search kbd {
+  color: var(--muted);
+}
+.search kbd {
+  border-color: var(--line);
+}
+.city-vignette {
+  background:
+    linear-gradient(90deg, #19181edb, transparent 49%, #19181e45),
+    linear-gradient(
+      180deg,
+      #19181ea6,
+      transparent 33%,
+      transparent 70%,
+      #19181ebf
+    );
+}
+.profile-panel,
+.dialog {
+  background: var(--panel);
+  border: 2px solid var(--edge);
+  border-radius: 24px;
+  box-shadow:
+    0 8px 0 var(--edge),
+    inset 0 2px 0 #ffffff08;
+  backdrop-filter: none;
+}
+.profile-panel {
+  padding: 23px;
+  scrollbar-color: #625c6c transparent;
+}
+.profile-panel h2,
+.dialog h2 {
+  color: var(--text);
+  font-weight: 750;
+  letter-spacing: -1px;
+}
+.dialog {
+  width: 590px;
+  padding: 32px;
+}
+.dialog h2 {
+  font-size: 32px;
+}
+.dialog h3 {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+}
+.dialog p,
+.panel-copy {
+  color: #bbb6c4;
+  font-size: 13px;
+}
+.dialog-backdrop {
+  background: #0c0b10b8;
+  backdrop-filter: blur(5px);
+}
+.panel-kicker {
+  color: var(--muted);
+  font-size: 9px;
+}
+.panel-kicker > span:last-child {
+  color: var(--text);
+}
+.primary,
+.connect {
+  background: #f1f0ec;
+  color: #111014;
+  border: 2px solid var(--edge);
+  border-radius: 17px;
+  box-shadow:
+    0 6px 0 var(--edge),
+    inset 0 -3px 0 #c5c4c2;
+  font-size: 13px;
+  font-weight: 750;
+  min-height: 46px;
+  padding: 13px 17px;
+}
+.dialog a.primary {
+  color: #111014;
+}
+.primary:hover,
+.connect:hover {
+  background: #fffefb;
+  filter: none;
+}
+.primary:active,
+.connect:active,
+.secondary:active,
+.rail-button:active,
+.community-shortcut:active {
+  transform: translateY(3px);
+  box-shadow: 0 3px 0 var(--edge);
+}
+.secondary,
+.community-shortcut,
+.placement-banner button,
+.swatch,
+.roof-picker button {
+  background: var(--surface-high);
+  color: var(--text);
+  border: 2px solid var(--edge);
+  border-radius: 15px;
+  box-shadow: var(--raised);
+  font-weight: 650;
+}
+.secondary {
+  min-height: 44px;
+}
+.community-shortcut {
+  margin-left: auto;
+}
+.rail-button {
+  background: #252429;
+  border: 2px solid var(--edge);
+  color: #d8d4df;
+  border-radius: 13px;
+  box-shadow: 0 4px 0 var(--edge);
+}
+.rail-button.active {
+  color: #17161a;
+  background: #f1f0ec;
+  border-color: var(--edge);
+  box-shadow:
+    0 4px 0 var(--edge),
+    inset 0 -2px 0 #c1bfc2;
+}
+.rail-divider {
+  background: var(--line);
+}
+.dialog-close {
+  color: var(--text);
+  background: var(--surface-low);
+  border: 2px solid var(--edge);
+  border-radius: 12px;
+  padding: 0;
+  width: 36px;
+  height: 36px;
+  box-shadow: 0 3px 0 var(--edge);
+}
+.community-card {
+  background: #222127;
+  border: 2px solid var(--edge);
+  border-radius: 18px;
+  padding: 19px;
+}
+.community-title h3 {
+  font-size: 18px;
+  margin: 0;
+}
+.community-title span,
+.stage-caption {
+  color: var(--muted);
+}
+.community-card select,
+select {
+  background: var(--surface-low);
+  color: var(--text);
+  border: 2px solid var(--edge);
+  border-radius: 14px;
+  min-height: 48px;
+  padding: 12px 15px;
+  box-shadow: inset 0 3px 0 #0003;
+  font-size: 14px;
+  color-scheme: dark;
+}
+.community-card select:focus-visible,
+select:focus-visible,
+input:focus-visible {
+  outline: 2px solid #e7e3ee;
+  outline-offset: 3px;
+}
+.small {
+  font-size: 10px;
+  color: var(--muted);
+}
+.community-card label {
+  font-weight: 650;
+}
+.panel-note,
+.campaign {
+  background: #1d1b21;
+  border: 1px solid #3c3641;
+  border-radius: 13px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.campaign {
+  margin-top: 17px;
+  padding: 15px;
+}
+.campaign b,
+.campaign span {
+  color: var(--text);
+}
+.campaign small {
+  color: var(--muted);
+}
+.contribution-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 10px;
+  padding-bottom: 6px;
+}
+.contribution-actions small {
+  flex-basis: 100%;
+}
+.progress-track {
+  background: #131217;
+  border: 1px solid #0d0c10;
+}
+.progress-track span {
+  background: #d4cfdc;
+}
+.city-heading h1 {
+  font-size: 34px;
+  font-weight: 750;
+  letter-spacing: -1.2px;
+}
+.city-heading em {
+  font: inherit;
+  font-style: normal;
+  color: var(--text);
+}
+.city-heading > p,
+.sponsor strong,
+.topchess-mark {
+  color: #d8d3df;
+}
+.topchess-mark {
+  background: #252429;
+  border: 2px solid var(--edge);
+  border-radius: 10px;
+  box-shadow: 0 3px 0 var(--edge);
+}
+.welcome-rook svg {
+  color: #eae7e0;
+  filter: drop-shadow(0 5px 0 #0d0c1044);
+}
+.welcome-rook::before {
+  border-color: #ffffff22;
+}
+.orbit-dot {
+  background: #f1f0ec;
+  box-shadow: none;
+}
+.three-benefits,
+.text-link,
+.profile-links a,
+.profile-links button,
+.level-line {
+  color: #d0cbd7;
+}
+.three-benefits i,
+.sync-time,
+.player-stats span,
+.rule > span {
+  color: var(--muted);
+}
+.city-ledger {
+  border-left-color: #bdb6c9;
+}
+.ledger-label,
+.city-ledger > strong span,
+.city-ledger p {
+  color: #c1bbc9;
+}
+.map-controls {
+  background: #252429;
+  border: 2px solid var(--edge);
+  border-radius: 15px;
+  box-shadow: var(--raised);
+  padding: 6px;
+  gap: 5px;
+}
+.map-controls button {
+  background: #302d35;
+  border: 1px solid var(--edge);
+  border-radius: 9px;
+  color: var(--text);
+}
+.map-controls button:hover {
+  background: #45414a;
+}
+.map-instructions {
+  color: #bbb4c4;
+}
+.credits-bar {
+  background: #1a191ff5;
+  color: var(--muted);
+  border-top: 2px solid var(--edge);
+}
+.credits-bar b,
+.credits-bar button {
+  color: #c8c1d3;
+}
+.notice,
+.placement-banner {
+  background: #252429;
+  border: 2px solid var(--edge);
+  border-radius: 17px;
+  box-shadow: var(--raised);
+  color: var(--text);
+}
+.notice button {
+  color: var(--text);
+}
+.placement-banner button {
+  padding: 9px 13px;
+}
+.roof-picker .chosen,
+.swatch.chosen {
+  outline: 2px solid #ede9f3;
+  outline-offset: 2px;
+  background: #36313c;
+  border-color: var(--edge);
+}
+.roof-picker small,
+.comparison span {
+  color: var(--muted);
+}
+.comparison > div {
+  background: #1d1b21;
+  border: 1px solid var(--edge);
+  border-radius: 14px;
+}
+@media (max-width: 640px) {
+  .dialog {
+    padding: 22px;
+    border-radius: 22px;
+  }
+  .dialog h2 {
+    font-size: 27px;
+  }
+  .connect {
+    font-size: 11px;
+    padding: 10px 12px;
+    min-height: 40px;
+    border-radius: 13px;
+  }
+  .search {
+    height: 44px;
+  }
+  .profile-panel {
+    border-radius: 20px;
+  }
+  .city-heading h1 {
+    font-size: 25px;
+  }
+  .community-shortcut {
+    font-size: 12px;
+    padding: 11px;
+  }
+  .community-card {
+    padding: 15px;
+  }
+}

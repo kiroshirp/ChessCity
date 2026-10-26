@@ -12,7 +12,7 @@ Tu trayectoria en Lichess, convertida en una ciudad. **Con el soporte de TopChes
 
 ## Funciones
 
-Ciudad 3D, selección con haz de luz, OAuth Lichess PKCE, media de puntuaciones consolidadas, crecimiento desde casita por actividad nueva, parcelas persistentes y comunidades con capacidad limitada. Solicitudes de ampliación de **1 € total** por 16 plazas. Los cobros están desactivados; no se simulan pagos reales.
+Ciudad 3D, selección con haz de luz, OAuth Lichess PKCE, media de puntuaciones consolidadas, crecimiento desde casita por actividad nueva, parcelas persistentes y comunidades con capacidad limitada. Solicitudes de ampliación de **1 €/mes total** por 4 plazas. Stripe está preparado para aportaciones mensuales de 0,50 € o 1 €, con cobros desactivados hasta verificar la cuenta y completar la configuración.
 
 ## Desarrollo local
 
@@ -22,7 +22,7 @@ Node.js >=22.13 y pnpm (las pruebas SQLite requieren Node >=22.13).
 pnpm install --frozen-lockfile
 pnpm source:archive
 pnpm build
-node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 migrations apply DB --local --config dist/server/wrangler.json --persist-to .wrangler/state
+node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 migrations apply DB --local --config wrangler.jsonc --persist-to .wrangler/state
 pnpm dev --port 5173
 ```
 
@@ -35,3 +35,7 @@ node tests/http-check.mjs
 ```
 
 La última comprobación requiere el servidor activo. Conservar el archivo de código fuente generado y las atribuciones al publicar.
+
+## Web publicada
+
+https://chesscity.kiroshirp.workers.dev

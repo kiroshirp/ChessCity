@@ -4,5 +4,30 @@
   "main": "dist/server/index.js",
   "compatibility_date": "2026-05-15",
   "compatibility_flags": ["nodejs_compat"],
-  "assets": { "directory": "dist/client" },
+  "no_bundle": true,
+  "assets": {
+    "directory": "dist/client",
+  },
+  "rules": [
+    {
+      "type": "ESModule",
+      "globs": ["**/*.js", "**/*.mjs"],
+    },
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "chesscity-db",
+      "database_id": "d650f381-3ff2-45e0-ac0f-b1bcdcf8d291",
+      "migrations_dir": "./drizzle",
+    },
+  ],
+  "build": {
+    "command": "node scripts/cloudflare-prepare-deploy.mjs",
+  },
+  "triggers": {"crons":["*/15 * * * *"]},
+  "vars": {
+    "STRIPE_PAYMENTS_ENABLED": "false",
+    "CHESSCITY_PUBLIC_ORIGIN": "https://chesscity.kiroshirp.workers.dev",
+  },
 }

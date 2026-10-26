@@ -5,16 +5,17 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { createWindowAtlas } from "../lib/vendor/window-atlas";
 import { createLayout, type CityBuilding } from "../lib/city-layout";
-import { identitySeed, type Player, type Mode } from "../lib/model";
+import {
+  identitySeed,
+  BUILDING_COLORS as COLORS,
+  type Player,
+  type Mode,
+} from "../lib/model";
 import { buildingStage } from "../lib/progression";
 import { NEIGHBORHOODS, type Plot } from "../lib/neighborhoods";
 
-const COLORS = {
-  jade: "#63d9bb",
-  amber: "#efbc6b",
-  violet: "#a39bdd",
-  ice: "#82c8df",
-};
+import { createCityAnimation } from "./city-animation";
+import type { CityEvent } from "../lib/city-events";
 
 interface Props {
   players: Player[];
@@ -24,6 +25,7 @@ interface Props {
   command: { name: string; id: number };
   onSelect: (player: Player) => void;
   plots: Plot[];
+  events: CityEvent[];
   placing: boolean;
   onPlotSelect: (plot: Plot) => void;
 }
@@ -36,10 +38,12 @@ export default function CityViewport({
   command,
   onSelect,
   plots,
+  events,
   placing,
   onPlotSelect,
 }: Props) {
   const host = useRef<HTMLDivElement>(null);
+  const animationStarts = useRef(new Map<string, number>());
   const api = useRef<{
     focus: (id: string | null) => void;
     command: (name: string) => void;
@@ -71,6 +75,7 @@ export default function CityViewport({
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.25;
     container.appendChild(renderer.domElement);
+    const layout = createLayout(players, mode);
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(39, 1, 0.5, 700);
     camera.position.set(225, 190, 250);
@@ -120,7 +125,14 @@ export default function CityViewport({
     const darkGold = material("#7b7153");
     const lightMat = new THREE.MeshBasicMaterial({ color: "#e6c486" });
     materials.push(lightMat);
-    box(0, -1.2, 0, 500, 2, 500, groundMat);
+    const worldExtent = Math.max(
+      500,
+      ...layout.flatMap((b) => [
+        Math.abs(b.x) * 2 + 100,
+        Math.abs(b.z) * 2 + 100,
+      ]),
+    );
+    box(0, -1.2, 0, worldExtent, 2, worldExtent, groundMat);
     for (let n = -13; n <= 13; n++) {
       box(n * 16 + 8, 0.05, 0, 3, 0.12, 450, roadMat);
       box(0, 0.06, n * 16 + 8, 450, 0.12, 3, roadMat);
@@ -184,8 +196,10 @@ export default function CityViewport({
       tree.position.set(x, 3.4, z);
       scene.add(tree);
     }
-    const layout = createLayout(players, mode);
-    const freePlots = plots.filter((plot) => !plot.ownerId);
+    const freePlots = plots.filter(
+      (plot) =>
+        !plot.ownerId && (plot.available === undefined || !!plot.available),
+    );
     const plotGeo = new THREE.BoxGeometry(12, 0.15, 12);
     geometries.push(plotGeo);
     const plotMat = new THREE.MeshBasicMaterial({
@@ -309,7 +323,9 @@ export default function CityViewport({
     roofMaterial.side = THREE.DoubleSide;
     const buildings = new THREE.InstancedMesh(geometry, shader, layout.length);
     buildings.frustumCulled = false;
+    const decorations = new Map<string, THREE.Object3D[]>();
     layout.forEach((building, index) => {
+      const decorationStart = scene.children.length;
       const { x, z, width, depth, height, player } = building;
       matrix.position.set(x, height / 2 + 0.5, z);
       matrix.scale.set(width, height, depth);
@@ -349,6 +365,7 @@ export default function CityViewport({
         box(x, height + 2, z, 0.25, 4, 0.25, curbMat);
         box(x, height + 4, z, 0.55, 0.55, 0.55, lightMat);
       }
+      decorations.set(player.id, scene.children.slice(decorationStart));
     });
     buildings.instanceMatrix.needsUpdate = true;
     scene.add(buildings);
@@ -442,6 +459,26 @@ export default function CityViewport({
       camera.updateProjectionMatrix();
       schedule();
     };
+    const reducedMotion = matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    let animations = events.slice(0, 12).map((event) => {
+      let started = animationStarts.current.get(event.id);
+      if (started === undefined) {
+        started = Math.max(Date.now(), event.createdAt);
+        animationStarts.current.set(event.id, started);
+      }
+      return {
+        event,
+        view: createCityAnimation(scene, event, started, reducedMotion),
+        index: layout.findIndex((b) => b.player.id === event.playerId),
+      };
+    });
+    if (animationStarts.current.size > 200) {
+      const keep = new Set(events.map((e) => e.id));
+      for (const id of animationStarts.current.keys())
+        if (!keep.has(id)) animationStarts.current.delete(id);
+    }
     const frame = (now: number) => {
       request = 0;
       if (document.hidden || disposed) return;
@@ -451,7 +488,32 @@ export default function CityViewport({
       }
       last = now;
       controls.update();
+      animations = animations.filter((animation) => {
+        const state = animation.view.update(Date.now());
+        if (animation.event.kind !== "demolition" && animation.index >= 0) {
+          const b = layout[animation.index];
+          const h =
+            (animation.event.building.fromHeight ?? 0) * (1 - state.progress) +
+            b.height * state.progress;
+          matrix.position.set(b.x, h / 2 + 0.5, b.z);
+          matrix.scale.set(b.width, Math.max(0.001, h), b.depth);
+          matrix.updateMatrix();
+          buildings.setMatrixAt(animation.index, matrix.matrix);
+          buildings.instanceMatrix.needsUpdate = true;
+          decorations
+            .get(b.player.id)
+            ?.forEach(
+              (mesh) => (mesh.visible = state.done || state.progress > 0.94),
+            );
+        }
+        if (state.done) {
+          animation.view.dispose();
+          return false;
+        }
+        return true;
+      });
       renderer.render(scene, camera);
+      if (animations.length) schedule();
     };
     function schedule() {
       if (!request && !document.hidden && !disposed)
@@ -525,6 +587,7 @@ export default function CityViewport({
       cancelAnimationFrame(request);
       observer.disconnect();
       document.removeEventListener("visibilitychange", visibility);
+      animations.forEach((animation) => animation.view.dispose());
       controls.dispose();
       atlas.dispose();
       labelTextures.forEach((texture) => texture.dispose());
@@ -534,10 +597,10 @@ export default function CityViewport({
       renderer.domElement.remove();
       api.current = null;
     };
-  }, [players, mode, plots, placing]);
+  }, [players, mode, plots, placing, events]);
   useEffect(
     () => api.current?.focus(selected),
-    [selected, players, mode, plots, placing],
+    [selected, players, mode, plots, placing, events],
   );
   useEffect(() => api.current?.theme(daylight), [daylight]);
   useEffect(() => api.current?.command(command.name), [command]);

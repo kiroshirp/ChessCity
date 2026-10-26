@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
-import { validateDatabaseId } from "./cloudflare-config.mjs";
-const databaseId = validateDatabaseId(process.env.CHESSCITY_D1_ID);
+import { productionDatabaseId } from "./cloudflare-config.mjs";
+const databaseId = productionDatabaseId();
 const configPath = "dist/server/wrangler.json";
 const config = JSON.parse(readFileSync(configPath, "utf8"));
 config.name = "chesscity";

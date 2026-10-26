@@ -29,6 +29,7 @@ export function CommunityPanel({
   onPick,
   onMap,
   onExpand,
+  onContribute,
 }: {
   data: NeighborhoodData;
   me: Player | null;
@@ -36,6 +37,7 @@ export function CommunityPanel({
   onPick: (plot: Plot) => void;
   onMap: () => void;
   onExpand: () => void;
+  onContribute: (expansionId: string, amountCents: number) => void;
 }) {
   return (
     <>
@@ -63,7 +65,10 @@ export function CommunityPanel({
               item.status === "awaiting_payment",
           );
           const free = data.plots.filter(
-            (plot) => plot.communityId === community.id && !plot.ownerId,
+            (plot) =>
+              plot.communityId === community.id &&
+              !plot.ownerId &&
+              (plot.available === undefined || !!plot.available),
           );
           return (
             <article className="community-card" key={community.id}>
@@ -110,13 +115,13 @@ export function CommunityPanel({
                   </option>
                 ))}
               </select>
-              {own && (
+              {own && community.id !== "libre" && (
                 <button
                   className="secondary full"
                   onClick={onExpand}
                   disabled={busy || community.capacity >= 64}
                 >
-                  Solicitar ampliación · 1 € total
+                  Solicitar ampliación · 1 €/mes en total
                 </button>
               )}
               {campaign && (
@@ -130,9 +135,42 @@ export function CommunityPanel({
                     / 1,00 €
                   </span>
                   <small>
-                    Objetivo de toda la comunidad. Los cobros todavía no están
-                    activados.
+                    Alquiler conjunto de 1 €/mes. Puede pagarlo una persona o
+                    compartirse en dos aportaciones de 0,50 €/mes.
                   </small>
+                  {!data.paymentsEnabled && (
+                    <small>
+                      Stripe pendiente de activación. No se realizará ningún
+                      cargo.
+                    </small>
+                  )}
+                  {data.paymentsEnabled && own && (
+                    <div className="contribution-actions">
+                      <button
+                        className="secondary"
+                        disabled={busy}
+                        onClick={() => onContribute(campaign.id, 50)}
+                      >
+                        Aportar 0,50 €/mes
+                      </button>
+                      {campaign.paidCents === 0 && (
+                        <button
+                          className="secondary"
+                          disabled={busy}
+                          onClick={() => onContribute(campaign.id, 100)}
+                        >
+                          Asumir 1 €/mes
+                        </button>
+                      )}
+                      {!!campaign.reservedCents && (
+                        <small>
+                          Hay importes reservados en Stripe. Puedes reanudar tu
+                          aportación; las demás esperan su confirmación o
+                          caducidad.
+                        </small>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </article>
@@ -148,9 +186,11 @@ export function CommunityPanel({
           style: "currency",
           currency: "EUR",
         })}{" "}
-        en total y está preparada para añadir {EXPANSION_SLOTS} plazas. Sin un
-        pago verificado no se desbloquea terreno. No se realizará ningún cargo
-        en esta versión.
+        al mes entre toda la comunidad y añade {EXPANSION_SLOTS} plazas. Sin un
+        pago verificado no se desbloquea terreno.{" "}
+        {data.paymentsEnabled
+          ? "El pago se confirma en Stripe."
+          : "Los cobros aún están desactivados."}
       </p>
     </>
   );

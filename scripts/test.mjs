@@ -8,6 +8,10 @@ for (const name of [
   "progression",
   "neighborhoods",
   "expansion-settlement",
+  "stripe-protocol",
+  "checkout-store",
+  "city-events",
+  "construction-timeline",
 ]) {
   const source = readFileSync(`lib/${name}.ts`, "utf8").replace(
     /from ['"]\.\/([a-z-]+)['"]/g,
@@ -28,6 +32,8 @@ const result = spawnSync(
     "tests/domain.test.mjs",
     "tests/progression.test.mjs",
     "tests/database.test.mjs",
+    "tests/stripe.test.mjs",
+    "tests/animation.test.mjs",
   ],
   { stdio: "inherit" },
 );

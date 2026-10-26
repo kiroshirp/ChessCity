@@ -1,5 +1,7 @@
 import { env } from "cloudflare:workers";
 import { normalizeProfile, experience, type Player } from "./model";
+import { queueConstruction } from "./city-events";
+import { buildingStage } from "./progression";
 import { advanceProgress } from "./progression";
 
 export function database() {
@@ -249,7 +251,12 @@ export async function saveProfile(raw: unknown, claimed = false) {
         initial.ratedBaseline,
       )
       .run();
-    if (result.meta.changes) break;
+    if (result.meta.changes) {
+      const updated=(await findPlayer(profile.id))!;
+      const before=buildingStage(initial),after=buildingStage(progress);
+      if(after.index>before.index&&updated.plot)await queueConstruction(database(),updated,'upgrade',before.stage.height);
+      return updated;
+    }
     if (attempt === 3)
       throw new ApiError(
         "El perfil se ha actualizado en otra petición. Vuelve a sincronizar.",

@@ -1,6 +1,12 @@
 import { buildingStage } from "./progression";
 export const MODES = ["rapid", "blitz", "bullet", "classical"] as const;
 export type Mode = (typeof MODES)[number];
+export const BUILDING_COLORS = {
+  jade: "#63d9bb",
+  amber: "#efbc6b",
+  violet: "#a39bdd",
+  ice: "#82c8df",
+};
 export const ACCENTS = ["jade", "amber", "violet", "ice"] as const;
 export const ROOFS = ["antenna", "crown", "garden"] as const;
 export type Accent = (typeof ACCENTS)[number];

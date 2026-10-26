@@ -14,6 +14,13 @@ export interface CityBuilding {
   band: number;
 }
 
+/** Only verified owners who actually chose a plot occupy the shared city. */
+export function cityResidents(players: Player[]) {
+  return players.filter(
+    (player) => player.claimed && !!player.plot && !player.demo,
+  );
+}
+
 export function createLayout(
   players: Player[],
   mode: Mode,

@@ -1,4 +1,5 @@
 "use client";
+import type { CityEvent } from "../lib/city-events";
 
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 const CityViewport = lazy(() => import("./CityViewport"));
@@ -10,7 +11,7 @@ import {
 } from "./CommunityPanel";
 import { combinedRating } from "../lib/progression";
 import { NEIGHBORHOODS, type Plot } from "../lib/neighborhoods";
-import { demoPlayers } from "../lib/city-layout";
+import { cityResidents } from "../lib/city-layout";
 import {
   ACCENTS,
   MODES,
@@ -81,6 +82,7 @@ function Rook() {
 export default function ChessCity() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [total, setTotal] = useState(0);
+  const [cityEvents, setCityEvents] = useState<CityEvent[]>([]);
   const [me, setMe] = useState<Player | null>(null);
   const [selected, setSelected] = useState<Player | null>(null);
   const [query, setQuery] = useState("");
@@ -99,11 +101,7 @@ export default function ChessCity() {
   const [pendingPlot, setPendingPlot] = useState<Plot | null>(null);
   const [compare, setCompare] = useState<string>("");
   const dialogRef = useRef<HTMLElement>(null);
-  const samples = useMemo(() => demoPlayers(), []);
-  const cityPlayers = useMemo(
-    () => [...players, ...samples.slice(0, Math.max(0, 80 - players.length))],
-    [players, samples],
-  );
+  const cityPlayers = useMemo(() => cityResidents(players), [players]);
   const progress = selected && !selected.demo ? progressFor(selected) : null;
   const performance = selected ? combinedRating(selected.profile) : null;
   const ordered = useMemo(
@@ -125,7 +123,9 @@ export default function ChessCity() {
   useEffect(() => {
     let active = true;
     Promise.allSettled([
-      api<{ players: Player[]; total: number }>("/api/city"),
+      api<{ players: Player[]; total: number; events: CityEvent[] }>(
+        "/api/city",
+      ),
       api<{ player: Player | null }>("/api/me"),
       api<NeighborhoodData>("/api/neighborhoods"),
     ]).then((results) => {
@@ -134,6 +134,7 @@ export default function ChessCity() {
         account = results[1];
       if (city.status === "fulfilled") {
         setPlayers(city.value.players);
+        setCityEvents(city.value.events ?? []);
         setTotal(city.value.total);
       } else setMessage(city.reason.message);
       if (account.status === "fulfilled" && account.value.player) {
@@ -144,6 +145,21 @@ export default function ChessCity() {
       setLoaded(true);
     });
     const params = new URLSearchParams(location.search);
+    if (params.has("payment")) {
+      setDialog("communities");
+      setMessage(
+        "Consultando el estado de tu aportación. Volver de Stripe no acredita el pago por sí solo.",
+      );
+      api<{ status: string }>("/api/contributions", { method: "POST" })
+        .then(async () => {
+          await refreshNeighborhoods();
+          setMessage(
+            "Estado de la comunidad actualizado. Solo cuentan los pagos verificados por Stripe.",
+          );
+        })
+        .catch((error) => setMessage(error.message));
+      history.replaceState(null, "", location.pathname);
+    }
     if (params.get("auth") === "failed")
       setMessage(
         "No se completó la vinculación con Lichess. Puedes volver a intentarlo.",
@@ -152,6 +168,46 @@ export default function ChessCity() {
       history.replaceState(null, "", location.pathname);
     return () => {
       active = false;
+    };
+  }, []);
+  useEffect(() => {
+    let live = true;
+    const timer = setInterval(() => {
+      if (document.hidden) return;
+      api<{ players: Player[]; total: number; events: CityEvent[] }>(
+        "/api/city",
+      )
+        .then((data) => {
+          if (!live) return;
+          setPlayers((previous) =>
+            JSON.stringify(previous) === JSON.stringify(data.players)
+              ? previous
+              : data.players,
+          );
+          setCityEvents((previous) =>
+            JSON.stringify(previous) === JSON.stringify(data.events)
+              ? previous
+              : data.events,
+          );
+          setTotal(data.total);
+          setSelected((previous) =>
+            previous
+              ? (data.players.find((player) => player.id === previous.id) ??
+                previous)
+              : previous,
+          );
+          setMe((previous) =>
+            previous
+              ? (data.players.find((player) => player.id === previous.id) ??
+                previous)
+              : previous,
+          );
+        })
+        .catch(() => {});
+    }, 15000);
+    return () => {
+      live = false;
+      clearInterval(timer);
     };
   }, []);
   useEffect(() => {
@@ -205,10 +261,19 @@ export default function ChessCity() {
       );
       upsert(player);
       setQuery("");
-      const city = await api<{ players: Player[]; total: number }>("/api/city");
+      const city = await api<{
+        players: Player[];
+        total: number;
+        events: CityEvent[];
+      }>("/api/city");
       setPlayers(city.players);
+      setCityEvents(city.events ?? []);
       setTotal(city.total);
-      setMessage(`${player.username} ya tiene un lugar en ChessCity.`);
+      setMessage(
+        player.plot
+          ? `${player.username} ya tiene un lugar en ChessCity.`
+          : `${player.username} todavía no ha elegido una parcela.`,
+      );
     } catch (error) {
       setMessage((error as Error).message);
     } finally {
@@ -216,7 +281,11 @@ export default function ChessCity() {
     }
   }
   async function refreshNeighborhoods() {
-    setNeighborhoods(await api<NeighborhoodData>("/api/neighborhoods"));
+    const data = await api<NeighborhoodData>("/api/neighborhoods");
+    setNeighborhoods(data);
+    setTotal(
+      data.communities.reduce((sum, community) => sum + community.occupied, 0),
+    );
   }
   function pickPlot(plot: Plot) {
     setMessage("");
@@ -228,11 +297,15 @@ export default function ChessCity() {
     setBusy(true);
     setMessage("");
     try {
-      const { player } = await api<{ player: Player }>("/api/placement", {
+      const { player, event } = await api<{
+        player: Player;
+        event?: CityEvent;
+      }>("/api/placement", {
         method: "POST",
         body: JSON.stringify({ plotId: pendingPlot.id }),
       });
       setMe(player);
+      if (event) setCityEvents((current) => [event, ...current].slice(0, 12));
       upsert(player);
       await refreshNeighborhoods();
       setPlacing(false);
@@ -252,10 +325,28 @@ export default function ChessCity() {
       await api("/api/expansions", { method: "POST" });
       await refreshNeighborhoods();
       setMessage(
-        "Solicitud creada. Objetivo: 1 € total. Los cobros aún no están activados.",
+        "Solicitud creada: 4 parcelas por 1 €/mes en total. Consulta las opciones de aportación de tu comunidad.",
       );
     } catch (error) {
       setMessage((error as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function contribute(expansionId: string, amountCents: number) {
+    setBusy(true);
+    setMessage("");
+    try {
+      const result = await api<{ url: string }>("/api/checkout", {
+        method: "POST",
+        body: JSON.stringify({ expansionId, amountCents }),
+      });
+      if (new URL(result.url).hostname !== "checkout.stripe.com")
+        throw new Error("Destino de pago no válido.");
+      location.assign(result.url);
+    } catch (error) {
+      setMessage((error as Error).message);
+      await refreshNeighborhoods().catch(() => {});
     } finally {
       setBusy(false);
     }
@@ -326,6 +417,7 @@ export default function ChessCity() {
           command={command}
           onSelect={setSelected}
           plots={neighborhoods.plots}
+          events={cityEvents}
           placing={placing}
           onPlotSelect={pickPlot}
         />
@@ -433,7 +525,9 @@ export default function ChessCity() {
       <section className="city-heading">
         <div className="eyebrow">
           <i />{" "}
-          {players.length ? "UNA CIUDAD DE AJEDRECISTAS" : "EXPLORA LA MAQUETA"}
+          {cityPlayers.length
+            ? "UNA CIUDAD DE AJEDRECISTAS"
+            : "LA CIUDAD EMPIEZA CONTIGO"}
         </div>
         <h1>
           Una partida más.
@@ -612,7 +706,7 @@ export default function ChessCity() {
               cómo se ve la tuya.
             </p>
             <a className="primary full" href="/auth/start">
-              Construir mi edificio <span>↗</span>
+              Elegir mi parcela <span>↗</span>
             </a>
             <div className="three-benefits">
               <span>
@@ -625,12 +719,6 @@ export default function ChessCity() {
                 <i>03</i> Hazlo tuyo
               </span>
             </div>
-            {selected?.demo && (
-              <div className="panel-note">
-                Has seleccionado una maqueta. No representa una cuenta real ni
-                estadísticas de Lichess.
-              </div>
-            )}
             <button className="text-link" onClick={() => setDialog("progress")}>
               ¿Cómo evoluciona mi edificio? →
             </button>
@@ -645,9 +733,9 @@ export default function ChessCity() {
         </strong>
         <div className="ledger-divider" />
         <p>
-          {players.length
-            ? "Selecciona un edificio para descubrir su historia. Los edificios sin jugador son maquetas visuales."
-            : "Los edificios de muestra son una vista previa visual. Busca un usuario para traer datos reales."}
+          {cityPlayers.length
+            ? "Cada casa pertenece a un jugador que ha elegido su parcela."
+            : "La ciudad está vacía. Vincula Lichess y elige tu parcela para construir la primera casa."}
         </p>
       </section>
       {message && (
@@ -791,6 +879,7 @@ export default function ChessCity() {
                     camera("reset");
                   }}
                   onExpand={() => void expandCommunity()}
+                  onContribute={(id, amount) => void contribute(id, amount)}
                 />
                 {message && <p role="status">{message}</p>}
               </>
@@ -885,9 +974,8 @@ export default function ChessCity() {
                   </a>
                 </div>
                 <div className="panel-note">
-                  Los edificios de muestra se identifican como maquetas. No se
-                  han inventado jugadores, rankings ni actividad de cuentas
-                  reales.
+                  La ciudad solo muestra edificios de propietarios verificados
+                  que han elegido una parcela. No se generan casas de muestra.
                 </div>
               </>
             )}

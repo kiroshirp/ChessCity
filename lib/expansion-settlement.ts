@@ -16,6 +16,7 @@ export async function settleVerifiedExpansionPayment(
     expansionId: string;
     amountCents: number;
     currency: string;
+    checkoutId?: string;
   },
 ) {
   if (
@@ -55,12 +56,38 @@ export async function settleVerifiedExpansionPayment(
   if (
     !Number.isInteger(capacity) ||
     capacity < 16 ||
+    capacity % EXPANSION_SLOTS !== 0 ||
     capacity + EXPANSION_SLOTS > MAX_COMMUNITY_SLOTS
   )
     throw new Error("Capacidad no válida.");
+  if (payment.checkoutId) {
+    const checkout = await db
+      .prepare("SELECT * FROM expansion_checkouts WHERE id=?")
+      .bind(payment.checkoutId)
+      .first<Record<string, any>>();
+    if (
+      !checkout ||
+      checkout.expansion_id !== payment.expansionId ||
+      checkout.amount_cents !== payment.amountCents ||
+      checkout.session_id !== payment.eventId ||
+      checkout.status !== "open"
+    )
+      throw new Error("Reserva de pago no válida.");
+  }
+  if (expansion.paid_cents + payment.amountCents > expansion.goal_cents)
+    throw new Error("El pago supera el objetivo.");
   const eligible = `EXISTS (SELECT 1 FROM expansions e JOIN communities c ON c.id=e.community_id
     WHERE e.id=? AND e.status='awaiting_payment' AND e.paid_cents>=e.goal_cents AND c.capacity=?)`;
   await db.batch([
+    ...(payment.checkoutId
+      ? [
+          db
+            .prepare(
+              "UPDATE expansion_checkouts SET status='paid' WHERE id=? AND status='open'",
+            )
+            .bind(payment.checkoutId),
+        ]
+      : []),
     db
       .prepare(
         `INSERT OR IGNORE INTO expansion_payments (event_id,expansion_id,amount_cents,currency,received_at)
@@ -83,7 +110,7 @@ export async function settleVerifiedExpansionPayment(
         point = plotCoordinates(expansion.community_id, slot);
       return db
         .prepare(
-          `INSERT OR IGNORE INTO plots (id,community_id,slot,x,z) SELECT ?,?,?,?,? WHERE ${eligible}`,
+          `INSERT OR IGNORE INTO plots (id,community_id,slot,x,z,rental_expansion_id) SELECT ?,?,?,?,?,? WHERE ${eligible}`,
         )
         .bind(
           `${expansion.community_id}:${slot}`,
@@ -91,6 +118,7 @@ export async function settleVerifiedExpansionPayment(
           slot,
           point.x,
           point.z,
+          payment.expansionId,
           payment.expansionId,
           capacity,
         );

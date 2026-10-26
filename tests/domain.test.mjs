@@ -10,6 +10,7 @@ import {
 } from "../.sites-runtime/tests/model.mjs";
 import {
   createLayout,
+  cityResidents,
   demoPlayers,
 } from "../.sites-runtime/tests/city-layout.mjs";
 
@@ -133,4 +134,18 @@ test("all scenic samples are explicitly marked, empty city is supported", () => 
     ),
   );
   assert.deepEqual(createLayout([], "rapid"), []);
+});
+
+test("the city is empty without verified plot owners, even after profile searches", () => {
+  const unplaced = { ...player(), claimed: true };
+  const located = {
+    ...unplaced,
+    id: "owner",
+    plot: { id: "alameda:0", communityId: "alameda", x: 1, z: 2 },
+  };
+  assert.deepEqual(cityResidents([player(), unplaced, ...demoPlayers()]), []);
+  assert.deepEqual(
+    cityResidents([located, { ...located, id: "unverified", claimed: false }]),
+    [located],
+  );
 });
