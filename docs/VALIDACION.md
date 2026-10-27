@@ -2,7 +2,7 @@
 
 ## Comprobaciones realizadas
 
-- 38 pruebas de dominio y SQLite superadas: normalización, límites de crecimiento, exclusión del historial, media de puntuaciones, coordenadas, propiedad exclusiva y liquidación idempotente del objetivo conjunto de 100 céntimos.
+- 39 pruebas de dominio y SQLite superadas: normalización, límites de crecimiento, exclusión del historial, media de puntuaciones, coordenadas, propiedad exclusiva, crecimiento del terreno público y liquidación idempotente del objetivo conjunto de 100 céntimos.
 - TypeScript sin errores y compilación completa satisfactoria. Three.js mantiene un bloque superior a 500 kB; falta medir rendimiento en dispositivos modestos.
 - Siete migraciones aplicadas correctamente a la nueva base D1 de ChessCity en Cloudflare.
 - HTTP en la web Cloudflare publicada: ciudad, sesión anónima/falsificada, PKCE, estado OAuth inválido, origen ajeno, 48 parcelas iniciales, operaciones protegidas y checkout desactivado.
