@@ -8,7 +8,10 @@ import { rentalSnapshot, renewalProcessing, stripeId } from "./rental-protocol";
 import { applyRentalSnapshot } from "./rental-store";
 import { verifyInvoicePayment } from "./stripe-proof";
 import { demolishExpiredRentals } from "./city-events";
-import { rentalCheckoutParameters } from "./rental-checkout";
+import {
+  rentalCheckoutParameters,
+  cancelRentalCheckout,
+} from "./rental-checkout";
 
 export function stripeEnabled() {
   return (
@@ -34,6 +37,11 @@ export function stripeClient() {
   });
 }
 const isLive = () => /^(sk|rk)_live_/.test(env.STRIPE_SECRET_KEY ?? "");
+
+export async function cancelPendingContribution(checkout: CheckoutRow) {
+  await cancelRentalCheckout(stripeClient(), checkout, isLive());
+  return reconcileCheckout(checkout);
+}
 
 export async function reconcileSubscription(
   subscriptionId: string,

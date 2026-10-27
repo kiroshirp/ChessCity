@@ -2,6 +2,75 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import Stripe from "stripe";
+import { cancelRentalCheckout } from "../.sites-runtime/tests/rental-checkout.mjs";
+
+test("leaving Checkout expires only the matching unpaid reservation", async () => {
+  let expired = 0;
+  const pending = {
+    id: "reservation",
+    session_id: "cs_expected",
+    amount_cents: 100,
+  };
+  const state = {
+    id: pending.session_id,
+    client_reference_id: pending.id,
+    mode: "subscription",
+    livemode: false,
+    amount_total: 100,
+    status: "open",
+  };
+  const client = {
+    checkout: {
+      sessions: {
+        retrieve: async () => state,
+        expire: async () => {
+          expired++;
+          state.status = "expired";
+        },
+      },
+    },
+  };
+  await cancelRentalCheckout(client, pending, false);
+  await cancelRentalCheckout(client, pending, false);
+  assert.equal(expired, 1);
+  state.status = "complete";
+  await cancelRentalCheckout(client, pending, false);
+  assert.equal(expired, 1);
+  state.client_reference_id = "someone-else";
+  await assert.rejects(cancelRentalCheckout(client, pending, false));
+  assert.equal(expired, 1);
+});
+
+test("a payment completing during cancellation is reconciled without expiring a subscription", async () => {
+  let reads = 0;
+  const state = {
+    id: "cs_expected",
+    client_reference_id: "reservation",
+    mode: "subscription",
+    livemode: false,
+    amount_total: 100,
+    status: "open",
+  };
+  const client = {
+    checkout: {
+      sessions: {
+        retrieve: async () => ({
+          ...state,
+          status: reads++ ? "complete" : "open",
+        }),
+        expire: async () => {
+          throw new Error("already completed");
+        },
+      },
+    },
+  };
+  await cancelRentalCheckout(
+    client,
+    { id: "reservation", session_id: state.id, amount_cents: 100 },
+    false,
+  );
+  assert.equal(reads, 2);
+});
 import {
   contributionAmount,
   boundedRequestText,

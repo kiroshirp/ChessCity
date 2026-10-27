@@ -152,7 +152,10 @@ export default function ChessCity() {
       setMessage(
         "Consultando el estado de tu aportación. Volver de Stripe no acredita el pago por sí solo.",
       );
-      api<{ status: string }>("/api/contributions", { method: "POST" })
+      api<{ status: string }>("/api/contributions", {
+        method: "POST",
+        body: JSON.stringify({ cancel: params.get("payment") === "cancel" }),
+      })
         .then(async () => {
           await refreshNeighborhoods();
           setMessage(

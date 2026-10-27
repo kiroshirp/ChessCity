@@ -66,10 +66,7 @@ export default function MyRentalsPanel() {
       {error && <p role="alert">{error}</p>}
       {!rentals && !error && <p role="status">Consultando aportaciones…</p>}
       {rentals?.length === 0 && (
-        <p className="panel-note">
-          No tienes alquileres activos. Los cobros todavía no están habilitados
-          en esta versión.
-        </p>
+        <p className="panel-note">No tienes alquileres activos.</p>
       )}
       <div className="community-list">
         {rentals?.map((rental) => (

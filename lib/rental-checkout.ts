@@ -1,6 +1,32 @@
 import type Stripe from "stripe";
 import type { CheckoutRow } from "./checkout-store";
 
+export async function cancelRentalCheckout(
+  client: Pick<Stripe, "checkout">,
+  pending: Pick<CheckoutRow, "id" | "session_id" | "amount_cents">,
+  live: boolean,
+) {
+  if (!pending.session_id)
+    throw new Error("La aportación sigue creándose. Inténtalo de nuevo.");
+  const current = await client.checkout.sessions.retrieve(pending.session_id);
+  if (
+    current.id !== pending.session_id ||
+    current.client_reference_id !== pending.id ||
+    current.mode !== "subscription" ||
+    current.livemode !== live ||
+    current.amount_total !== pending.amount_cents
+  )
+    throw new Error("La sesión no corresponde a esta aportación.");
+  if (current.status === "open") {
+    try {
+      await client.checkout.sessions.expire(current.id);
+    } catch (error) {
+      const updated = await client.checkout.sessions.retrieve(current.id);
+      if (updated.status === "open") throw error;
+    }
+  }
+}
+
 export function rentalCheckoutParameters(
   pending: Pick<
     CheckoutRow,

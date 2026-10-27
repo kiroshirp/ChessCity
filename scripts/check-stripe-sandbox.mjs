@@ -5,7 +5,10 @@ import assert from "node:assert/strict";
 import Stripe from "stripe";
 import { fixture } from "../tests/helpers/database.mjs";
 import { rentalSnapshot } from "../.sites-runtime/tests/rental-protocol.mjs";
-import { rentalCheckoutParameters } from "../.sites-runtime/tests/rental-checkout.mjs";
+import {
+  rentalCheckoutParameters,
+  cancelRentalCheckout,
+} from "../.sites-runtime/tests/rental-checkout.mjs";
 import { applyRentalSnapshot } from "../.sites-runtime/tests/rental-store.mjs";
 import { verifyInvoicePayment } from "../.sites-runtime/tests/stripe-proof.mjs";
 import { demolishExpiredRentals } from "../.sites-runtime/tests/city-events.mjs";
@@ -60,7 +63,15 @@ try {
   assert.equal(session.livemode, false);
   assert.equal(session.amount_total, 100);
   assert.equal(session.mode, "subscription");
-  await client.checkout.sessions.expire(session.id);
+  await cancelRentalCheckout(
+    client,
+    { ...checkout, session_id: session.id },
+    false,
+  );
+  assert.equal(
+    (await client.checkout.sessions.retrieve(session.id)).status,
+    "expired",
+  );
   console.log(
     "PASS · Checkout real de prueba acepta los parámetros de producción.",
   );
@@ -291,7 +302,7 @@ try {
     JSON.stringify({
       error: error.type ?? error.name,
       code: error.code,
-      message: error.message,
+      message: error.message.replace(/\b(?:sk|rk|rkcs|pk)_(?:test|live)_[^\s'\"]+/g, "[CLAVE OCULTA]"),
     }),
   );
   process.exitCode = 1;
