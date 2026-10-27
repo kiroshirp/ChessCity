@@ -81,9 +81,13 @@ console.log(
   "HTTP OK: city persistence, anonymous session, input validation, ownership/origin checks, forged-session rejection, PKCE start, state mismatch rejection and logout. No Lichess account was authorized by this check.",
 );
 const neighborhoods = await (await request("/api/neighborhoods")).json();
-assert.equal(neighborhoods.communities.length, 3);
-assert.equal(neighborhoods.plots.length, 48);
-assert.equal(neighborhoods.paymentsEnabled, false);
+for (const id of ["alameda", "mirador", "ribera", "abierta"])
+  assert.ok(neighborhoods.communities.some((community) => community.id === id));
+assert.ok(neighborhoods.plots.filter((plot) => plot.communityId === "abierta").length >= 256);
+assert.equal(new Set(neighborhoods.plots.map((plot) => plot.id)).size, neighborhoods.plots.length);
+assert.equal(typeof neighborhoods.paymentsEnabled, "boolean");
+if (process.env.CHESSCITY_EXPECT_PAYMENTS)
+  assert.equal(neighborhoods.paymentsEnabled, process.env.CHESSCITY_EXPECT_PAYMENTS === "true");
 for (const route of ["/api/placement", "/api/expansions"]) {
   assert.equal(
     (
@@ -113,10 +117,10 @@ assert.equal(
       headers: { Origin: origin },
     })
   ).status,
-  503,
+  neighborhoods.paymentsEnabled ? 401 : 503,
 );
 console.log(
-  "HTTP OK: 48 initial plots, protected placement/expansions, payments disabled.",
+  "HTTP OK: growing public land, protected placement/expansions, Checkout requires an authenticated owner.",
 );
 
 assert.equal((await request("/api/rentals")).status, 401);

@@ -36,7 +36,7 @@ El Worker comprueba los vencimientos cada 15 minutos. Solo procesa expansiones c
 
 ## Estado del enlace GitHub
 
-La publicación manual está verificada. El panel autenticado permitió identificar el fallo automático: las ramas ejecutaban `wrangler preview` sin compilación previa y faltaba `dist/client`. Se han configurado explícitamente compilación y despliegue tanto para Producción como para Base de vistas previas. Las vistas previas ya creadas conservan su configuración propia: también hay que corregir los comandos en su selector de rama > Configuración > Compilaciones. Cambiar la base no actualiza esas ramas existentes. Reintentar una compilación antigua reutiliza su configuración anterior: la comprobación debe hacerse con un nuevo commit. pnpm está fijado a 11.25.0.
+La publicación manual está verificada. El panel autenticado permitió identificar el fallo automático: las ramas ejecutaban `wrangler preview` sin compilación previa y faltaba `dist/client`. Se han configurado explícitamente compilación y despliegue tanto para Producción como para Base de vistas previas. Las vistas previas ya creadas conservan su configuración propia: también hay que corregir los comandos en su selector de rama > Configuración > Compilaciones. Cambiar la base no actualiza esas ramas existentes. Se verificó un reintento correcto tras actualizar también la configuración propia de la rama existente. pnpm está fijado a 11.25.0.
 
 ## Conciliación mensual
 
