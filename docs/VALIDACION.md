@@ -10,7 +10,7 @@
 
 ## Límites
 
-Las pruebas de liquidación usan recibos ficticios en una base aislada; no se ha realizado ningún cobro ni conectado un proveedor. Falta probar concurrencia real distribuida, carga masiva y equilibrio a largo plazo. La vinculación con Lichess fue confirmada por el usuario en el alojamiento anterior; no se ha repetido su consentimiento ni probado una reserva desde su sesión real en este entorno nuevo.
+Las pruebas unitarias usan una base aislada. Además se ha probado el ciclo mensual con la API de Stripe en modo de prueba y recursos propios. No se han realizado cobros reales. Falta probar concurrencia distribuida, carga masiva y equilibrio a largo plazo.
 
 Despliegue Cloudflare completado: https://chesscity.kiroshirp.workers.dev. Base D1 propia y cobros desactivados. El alojamiento anterior de Sites permanece independiente. Se han eliminado los archivos y paquetes locales del antiguo prototipo de gestión. La integración de Sites no ofrece una operación de eliminación del sitio remoto.
 
@@ -24,6 +24,6 @@ Pruebas adicionales: fin de alquiler, reubicación gratuita sin pérdida de prog
 
 Se sustituyó el liquidador inicial de pagos puntuales por un registro mensual de suscripciones y facturas; la tabla histórica se conserva. Las pruebas verifican períodos reales, renovaciones sin duplicados, dos aportaciones mensuales de 50 céntimos, cancelación al fin del período, bloqueo por reembolso, recuperación verificada, identidad inmutable, reservas que incluyen compromisos ya suscritos, rechazo de facturas sin pago real y firma con el SDK oficial. No se han creado pagos, suscripciones ni reembolsos en Stripe real.
 
-La verificación integral de Checkout, cobro, renovación y entrega de webhooks desde un sandbox de Stripe sigue pendiente. La conexión del chat a Stripe no instala credenciales en el Worker. El pago permanece bloqueado por configuración y por la guarda de validación integral.
+La prueba de integración con Stripe verifica los parámetros reales de Checkout, pago simulado inicial, renovación con Test Clocks, impago y recuperación, cancelación al fin del período con traslado gratuito, dos aportaciones de 0,50 € y un reembolso simulado. La aplicación usa los mismos parámetros de Checkout probados. Las credenciales de producción y la firma del webhook se han instalado como secretos del Worker. La apertura de Checkout y la entrega de avisos desde la publicación real se comprueban aparte; ninguna prueba completa pagos con dinero real.
 
 También se verifica que una observación de pago atrasada no deshace un reembolso posterior; las observaciones de cobertura se ordenan por su instante de consulta.

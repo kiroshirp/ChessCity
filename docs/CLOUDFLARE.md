@@ -26,17 +26,17 @@ El código prepara aportaciones mensuales de 50 céntimos o 1 euro, reservando e
 - Webhook hacia `https://chesscity.kiroshirp.workers.dev/api/stripe/webhook`, con API `2026-09-30.endive` y eventos checkout.session.completed/expired/async_payment_succeeded, customer.subscription.created/updated/deleted, invoice.paid/payment_failed/finalized/voided/marked_uncollectible y charge.refunded/dispute.created/dispute.closed.
 - `STRIPE_WEBHOOK_SECRET` guardado como secreto del Worker.
 - Pruebas integrales en modo de prueba, incluida recuperación y devolución de aportaciones.
-- Activación deliberada de `STRIPE_PAYMENTS_ENABLED`; actualmente está en `false`.
+- Activación deliberada de `STRIPE_PAYMENTS_ENABLED`, después de validar el ciclo mensual. La configuración de esta versión lo activa; requiere los dos secretos del servidor.
 
-El origen canónico se configura mediante `CHESSCITY_PUBLIC_ORIGIN`. La autorización del plugin de Stripe sirve para gestionar la cuenta desde el chat, pero no proporciona una clave de API a la aplicación. La lógica de facturas, cancelaciones y bloqueos por reembolso/disputa está implementada y probada con datos aislados; todavía no se presenta como una integración comercial validada. No se crean reembolsos automáticamente: se verifica el estado que comunica Stripe.
+El origen canónico se configura mediante `CHESSCITY_PUBLIC_ORIGIN`. La autorización del plugin de Stripe no proporciona una clave de API a la aplicación. Los secretos `STRIPE_SECRET_KEY` y `STRIPE_WEBHOOK_SECRET` se han guardado cifrados en el Worker. El destino de producción `we_1UV5wdRBnPDD6EfRTGKduHnG` usa API 2026-09-30.endive y 18 eventos. No se crean reembolsos automáticamente: se verifica el estado que comunica Stripe.
 
 Referencias: https://developers.cloudflare.com/workers/ci-cd/builds/configuration/ y https://docs.stripe.com/currencies#minimum-and-maximum-charge-amounts
 
-El Worker incluye una comprobación periódica de vencimientos cada 15 minutos. Solo procesa expansiones con una fecha de alquiler pagado guardada en servidor; no se toma la fecha del cliente. Al vencer se reubica a los propietarios en parcelas gratuitas y se registra la demolición/construcción visual. Antes de activar checkout falta probar el ciclo completo con un sandbox separado de Stripe y las credenciales del servidor. `RENTAL_LIFECYCLE_READY=false` mantiene el bloqueo aunque se añadan claves.
+El Worker comprueba los vencimientos cada 15 minutos. Solo procesa expansiones con una fecha de alquiler pagado guardada en servidor. Al vencer se reubica a los propietarios en parcelas gratuitas y se registra la demolición/construcción visual. La prueba de integración usa los mismos parámetros de Checkout que producción y verifica facturas y cargos de prueba reales del proveedor, además de conciliación en SQLite aislado.
 
 ## Estado del enlace GitHub
 
-La publicación manual está verificada. El panel autenticado permitió identificar el fallo automático: las ramas ejecutaban `wrangler preview` sin compilación previa y faltaba `dist/client`. Se han configurado explícitamente compilación y despliegue tanto para Producción como para Base de vistas previas. Reintentar una compilación antigua reutiliza su configuración anterior: la comprobación debe hacerse con un nuevo commit. pnpm está fijado a 11.25.0. La API local de registros sigue sin permiso Workers CI, aunque el panel sí permite leerlos.
+La publicación manual está verificada. El panel autenticado permitió identificar el fallo automático: las ramas ejecutaban `wrangler preview` sin compilación previa y faltaba `dist/client`. Se han configurado explícitamente compilación y despliegue tanto para Producción como para Base de vistas previas. Las vistas previas ya creadas conservan su configuración propia: también hay que corregir los comandos en su selector de rama > Configuración > Compilaciones. Cambiar la base no actualiza esas ramas existentes. Reintentar una compilación antigua reutiliza su configuración anterior: la comprobación debe hacerse con un nuevo commit. pnpm está fijado a 11.25.0.
 
 ## Conciliación mensual
 
@@ -48,4 +48,6 @@ Los vencimientos consultan Stripe antes de trasladar jugadores. Una factura aún
 
 Antes de abrir cobros hay que revisar también el tratamiento de impuestos. No se ha activado Stripe Tax ni se afirma que los importes estén fiscalmente configurados.
 
-Para el sandbox separado, configurar `STRIPE_PRODUCT_ID` con el producto de prueba y `CHESSCITY_PUBLIC_ORIGIN` con el origen del entorno aislado. Si no se define producto, se usa el producto real verificado de TopChess. Nunca usar una clave real en pruebas ni mezclar bases de datos entre los entornos.
+Para un Worker de prueba separado, configurar `STRIPE_PRODUCT_ID` con el producto de prueba y `CHESSCITY_PUBLIC_ORIGIN` con su origen. Si no se define producto, se usa el producto real verificado de TopChess. Nunca usar una clave real en pruebas ni mezclar bases de datos entre los entornos.
+
+La comprobación optativa `node scripts/check-stripe-sandbox.mjs` exige una clave de prueba fuera del código público y módulos generados por `node scripts/test.mjs`. Crea su propio reloj, cliente y producto de prueba; valida Checkout, pago inicial, renovación, impago y recuperación, cancelación con traslado, aportaciones compartidas y reembolso. El reloj y sus suscripciones se eliminan al terminar y el producto se archiva. El entorno temporal sin reclamar no permitía Test Clocks; la verificación se completó en el modo de prueba existente de TopChess con recursos propios, sin modificar recursos ajenos ni realizar cargos reales.

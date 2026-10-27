@@ -8,12 +8,10 @@ import { rentalSnapshot, renewalProcessing, stripeId } from "./rental-protocol";
 import { applyRentalSnapshot } from "./rental-store";
 import { verifyInvoicePayment } from "./stripe-proof";
 import { demolishExpiredRentals } from "./city-events";
+import { rentalCheckoutParameters } from "./rental-checkout";
 
-// Keep checkout closed until a full sandbox cycle and production credentials are verified.
-const RENTAL_LIFECYCLE_READY = false;
 export function stripeEnabled() {
   return (
-    RENTAL_LIFECYCLE_READY &&
     env.STRIPE_PAYMENTS_ENABLED === "true" &&
     !!env.STRIPE_SECRET_KEY &&
     !!env.STRIPE_WEBHOOK_SECRET &&
@@ -198,40 +196,8 @@ export async function createContribution(
   }
   if (pending.status === "open") return { url: pending.checkout_url };
   const origin = new URL(env.CHESSCITY_PUBLIC_ORIGIN!).origin;
-  const suffix = pending.id
-    .replaceAll("-", "")
-    .slice(0, 8)
-    .split("")
-    .map((c) => String.fromCharCode(97 + parseInt(c, 16)))
-    .join("");
-  const metadata = {
-    checkoutId: pending.id,
-    expansionId: pending.expansion_id,
-    playerId: pending.player_id,
-  };
   const session = await client.checkout.sessions.create(
-    {
-      mode: "subscription",
-      client_reference_id: pending.id,
-      integration_identifier: `chesscity-${suffix}`,
-      success_url: `${origin}/?payment=return`,
-      cancel_url: `${origin}/?payment=cancel`,
-      expires_at: Math.floor(pending.created_at / 1000) + 1800,
-      line_items: [
-        {
-          quantity: 1,
-          price_data: {
-            currency: "eur",
-            unit_amount: pending.amount_cents,
-            product: stripeProductId(),
-            tax_behavior: "inclusive",
-            recurring: { interval: "month" },
-          },
-        },
-      ],
-      metadata,
-      subscription_data: { metadata },
-    },
+    rentalCheckoutParameters(pending, origin, stripeProductId()),
     { idempotencyKey: `chesscity:${pending.id}` },
   );
   if (

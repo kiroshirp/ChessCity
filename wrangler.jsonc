@@ -27,7 +27,7 @@
   },
   "triggers": {"crons":["*/15 * * * *"]},
   "vars": {
-    "STRIPE_PAYMENTS_ENABLED": "false",
+    "STRIPE_PAYMENTS_ENABLED": "true",
     "CHESSCITY_PUBLIC_ORIGIN": "https://chesscity.kiroshirp.workers.dev",
   },
 }

@@ -15,6 +15,7 @@ for (const name of [
   "rental-protocol",
   "stripe-proof",
   "public-land",
+  "rental-checkout",
 ]) {
   const source = readFileSync(`lib/${name}.ts`, "utf8").replace(
     /from ['"]\.\/([a-z-]+)['"]/g,
