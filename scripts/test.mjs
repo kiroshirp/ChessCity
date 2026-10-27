@@ -14,7 +14,7 @@ for (const name of [
   "rental-store",
   "rental-protocol",
   "stripe-proof",
-  "public-land",
+  "open-land",
   "rental-checkout",
 ]) {
   const source = readFileSync(`lib/${name}.ts`, "utf8").replace(
@@ -34,6 +34,7 @@ const result = spawnSync(
   [
     "--test",
     "tests/domain.test.mjs",
+    "tests/open-land.test.mjs",
     "tests/progression.test.mjs",
     "tests/database.test.mjs",
     "tests/stripe.test.mjs",

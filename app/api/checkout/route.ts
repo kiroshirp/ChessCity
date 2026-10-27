@@ -32,7 +32,9 @@ export async function POST(request: Request) {
     if (
       !body ||
       typeof body.expansionId !== "string" ||
-      !/^(alameda|mirador|ribera):\d{1,2}$/.test(body.expansionId)
+      !/^(alameda|mirador|ribera|club_[a-f0-9]{32}):\d{1,2}$/.test(
+        body.expansionId,
+      )
     )
       throw new ApiError("Solicitud no válida.");
     if (body.amountCents !== 50 && body.amountCents !== 100)

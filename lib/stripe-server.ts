@@ -150,6 +150,17 @@ export async function createContribution(
   expansionId: string,
   amount: unknown,
 ) {
+  if (expansionId.startsWith("club_")) {
+    const reserved = await database()
+      .prepare("SELECT COUNT(*) n FROM plots WHERE rental_expansion_id=?")
+      .bind(expansionId)
+      .first<{ n: number }>();
+    if (reserved?.n !== 4)
+      throw new ApiError(
+        "La ampliación todavía no tiene cuatro sitios disponibles. Vuelve a solicitarla antes de aportar.",
+        409,
+      );
+  }
   if (!stripeEnabled())
     throw new ApiError(
       "Los cobros aún no están activados. No se ha realizado ningún cargo.",

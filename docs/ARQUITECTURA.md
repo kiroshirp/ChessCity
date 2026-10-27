@@ -44,10 +44,18 @@ Ver `NOTICE.md`. El archivo público `/source/chesscity.tar.gz` contiene el cód
 
 `lib/city-events.ts` registra obras y mejoras reales, y reubica al vencer un alquiler conservando el perfil del alumno. Se generan dos eventos: demolición en origen y obra en una parcela gratuita. La operación es transaccional e idempotente, con una zona gratuita de reserva si todas las parcelas iniciales están ocupadas. El Worker comprueba vencimientos cada quince minutos.
 
-`app/city-animation.ts` usa geometrías compartidas y elementos temporales para grúa, bola, operarios y andamios. El render continuo solo se mantiene durante las animaciones; se vuelve a dibujar bajo demanda al terminar. Los eventos recientes se consultan cada quince segundos en pestañas visibles; si no cambian los datos no se reconstruye la escena. La conciliación mensual está implementada, pero no habilita cobros hasta completar la prueba integral.
+`app/city-animation.ts` usa geometrías compartidas y elementos temporales para grúa, bola, operarios y andamios. El render continuo solo se mantiene durante las animaciones; se vuelve a dibujar bajo demanda al terminar. Los eventos recientes se consultan cada quince segundos en pestañas visibles; si no cambian los datos no se reconstruye la escena. La conciliación mensual y el aviso firmado se verificaron antes de habilitar cobros.
 
 ## Facturas y suscripciones
 
 `lib/rental-store.ts` mantiene `rental_subscriptions` y `rental_invoices`. Las escrituras de estado, cobertura y parcelas son transaccionales. Los IDs de factura son inmutables y el acceso usa fechas de servicio, no un contador acumulado de cobros. `lib/rental-protocol.ts` valida producto, moneda, importe y periodicidad; `lib/stripe-proof.ts` comprueba el grafo de pagos de las facturas para no aceptar simplemente un estado «paid» marcado manualmente.
 
-`lib/stripe-server.ts` usa una instancia del SDK oficial, Checkout en modo subscription, lectura de estado actual para webhook y cron y cancelación al final del período. Los webhooks se firman/verifican con el SDK y se vinculan por IDs de Stripe a registros propios. No se almacenan métodos de pago ni datos de tarjeta; solo IDs, importes y períodos necesarios. «Mis alquileres» consulta y cancela exclusivamente las aportaciones de la sesión autenticada. Se mantienen los cobros desactivados.
+`lib/stripe-server.ts` usa una instancia del SDK oficial, Checkout en modo subscription, lectura de estado actual para webhook y cron y cancelación al final del período. Los webhooks se firman/verifican con el SDK y se vinculan por IDs de Stripe a registros propios. No se almacenan métodos de pago ni datos de tarjeta; solo IDs, importes y períodos necesarios. «Mis alquileres» consulta y cancela exclusivamente las aportaciones de la sesión autenticada. Los cobros están habilitados con los secretos en Cloudflare.
+
+## Colocación libre y comunidades de jugadores
+
+`lib/open-land.ts` concentra coordenadas, validación, ocupación transaccional, fundación y reserva contigua de ampliaciones. `app/api/placement` acepta coordenadas de terreno libre o el ID de un sitio alquilado con cobertura vigente. `app/api/communities` permite fundar desde una casa gratuita. No se confía en coordenadas, disponibilidad ni pertenencia declaradas por el cliente.
+
+La migración `0007_open_placement.sql` es aditiva. Los lotes históricos vacíos se conservan pero no se listan ni bloquean nuevas ubicaciones. `listNeighborhoods` muestra edificios reales, comunidades fundadas y plazas de alquiler; nunca genera terreno por consultar. Las ampliaciones nuevas reservan cuatro direcciones al lado del fundador antes del Checkout, y el motor mensual activa esa misma reserva sin recalcular ubicaciones. La recolocación por vencimiento también comprueba solapamientos.
+
+Three.js usa intersección con un plano para elegir suelo y una sola casita transparente de vista previa. Las calles se dibujan con instancias, no con un objeto por tramo. La cámara se conserva al actualizar la escena. `app/CitySelect.tsx` reutiliza Radix ya instalado para desplegables accesibles con la apariencia común.

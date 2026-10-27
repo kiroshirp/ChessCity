@@ -61,13 +61,28 @@ export async function applyRentalSnapshot(
   )
     throw new Error("Alquiler no válido.");
   const base = Number(expansion.id.split(":")[1]);
+  const community = await db
+    .prepare("SELECT origin_x FROM communities WHERE id=?")
+    .bind(expansion.community_id)
+    .first<{ origin_x: number | null }>();
+  const dynamic = community?.origin_x != null;
   if (
     !Number.isInteger(base) ||
-    base < 16 ||
-    base % 4 ||
+    (dynamic
+      ? base < 1 || (base - 1) % 4 !== 0
+      : base < 16 || base % 4 !== 0) ||
     base + 4 > MAX_COMMUNITY_SLOTS
   )
     throw new Error("Terreno no válido.");
+  if (dynamic) {
+    const reserved = await db
+      .prepare(
+        "SELECT COUNT(*) n FROM plots WHERE rental_expansion_id=? AND community_id=?",
+      )
+      .bind(expansion.id, expansion.community_id)
+      .first<{ n: number }>();
+    if (reserved?.n !== 4) throw new Error("Reserva de terreno incompleta.");
+  }
   const statements: D1PreparedStatement[] = [
     db
       .prepare(
@@ -151,7 +166,7 @@ export async function applyRentalSnapshot(
         `UPDATE expansions SET paid_cents=COALESCE((SELECT SUM(s.amount_cents) FROM rental_subscriptions s WHERE s.expansion_id=expansions.id AND ${funded}),0) WHERE id=?`,
       )
       .bind(now, now, checkout.expansion_id),
-    ...Array.from({ length: 4 }, (_, index) => {
+    ...Array.from({ length: dynamic ? 0 : 4 }, (_, index) => {
       const slot = base + index,
         point = plotCoordinates(expansion.community_id, slot);
       return db

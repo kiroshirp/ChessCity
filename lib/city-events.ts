@@ -77,8 +77,9 @@ export async function demolishExpiredRentals(
     const eligible =
       "EXISTS (SELECT 1 FROM expansions WHERE id=? AND status='applied' AND rent_paid_until IS NOT NULL AND rent_paid_until<=?)";
 
-    const freePlot =
-      "SELECT l.id FROM plots l WHERE l.rental_expansion_id IS NULL AND NOT EXISTS (SELECT 1 FROM players p WHERE p.plot_id=l.id) ORDER BY l.community_id,l.slot LIMIT 1";
+    const freePlot = `SELECT l.id FROM plots l WHERE l.rental_expansion_id IS NULL AND NOT EXISTS (SELECT 1 FROM players p WHERE p.plot_id=l.id)
+       AND NOT EXISTS (SELECT 1 FROM plots other WHERE other.id<>l.id AND ABS(other.x-l.x)<15 AND ABS(other.z-l.z)<15 AND
+         (other.rental_expansion_id IS NOT NULL OR EXISTS (SELECT 1 FROM players op WHERE op.plot_id=other.id))) ORDER BY l.community_id,l.slot LIMIT 1`;
     const statements: D1PreparedStatement[] = [];
     for (const row of rows.results) {
       const player: Player = {
@@ -131,7 +132,12 @@ export async function demolishExpiredRentals(
           ),
         db
           .prepare(
-            `INSERT INTO plots (id,community_id,slot,x,z) SELECT 'libre:'||n,'libre',n,-208-(n%8)*16,-128+(n/8)*16 FROM (SELECT COALESCE(MAX(slot)+1,0) n FROM plots WHERE community_id='libre') WHERE ${eligible} AND EXISTS (SELECT 1 FROM players WHERE id=? AND plot_id=?) AND NOT EXISTS (${freePlot})`,
+            `INSERT INTO plots (id,community_id,slot,x,z)
+             WITH RECURSIVE candidate(n) AS (SELECT COALESCE(MAX(slot)+1,0) FROM plots WHERE community_id='libre' UNION ALL SELECT n+1 FROM candidate WHERE n<65535)
+             SELECT 'libre:'||n,'libre',n,-2048+(n%256)*16,-2048+(n/256)*16 FROM candidate
+             WHERE ${eligible} AND EXISTS (SELECT 1 FROM players WHERE id=? AND plot_id=?) AND NOT EXISTS (${freePlot})
+             AND MAX(ABS(-2048+(n%256)*16),ABS(-2048+(n/256)*16))>=48
+             AND NOT EXISTS (SELECT 1 FROM plots other WHERE ABS(other.x-(-2048+(n%256)*16))<15 AND ABS(other.z-(-2048+(n/256)*16))<15 AND (other.rental_expansion_id IS NOT NULL OR EXISTS (SELECT 1 FROM players op WHERE op.plot_id=other.id))) LIMIT 1`,
           )
           .bind(rental.id, now, player.id, row.plot_id),
         db

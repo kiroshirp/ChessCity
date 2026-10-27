@@ -1,5 +1,6 @@
 "use client";
 import MyRentalsPanel from "./MyRentalsPanel";
+import CitySelect from "./CitySelect";
 import type { CityEvent } from "../lib/city-events";
 
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
@@ -11,7 +12,7 @@ import {
   type NeighborhoodData,
 } from "./CommunityPanel";
 import { combinedRating } from "../lib/progression";
-import { NEIGHBORHOODS, type Plot } from "../lib/neighborhoods";
+import { type Plot } from "../lib/neighborhoods";
 import { cityResidents } from "../lib/city-layout";
 import {
   ACCENTS,
@@ -288,9 +289,7 @@ export default function ChessCity() {
   async function refreshNeighborhoods() {
     const data = await api<NeighborhoodData>("/api/neighborhoods");
     setNeighborhoods(data);
-    setTotal(
-      data.communities.reduce((sum, community) => sum + community.occupied, 0),
-    );
+    setTotal(data.plots.filter((plot) => !!plot.ownerId).length);
   }
   function pickPlot(plot: Plot) {
     setMessage("");
@@ -307,7 +306,11 @@ export default function ChessCity() {
         event?: CityEvent;
       }>("/api/placement", {
         method: "POST",
-        body: JSON.stringify({ plotId: pendingPlot.id }),
+        body: JSON.stringify(
+          pendingPlot.id.startsWith("site:")
+            ? { x: pendingPlot.x, z: pendingPlot.z }
+            : { plotId: pendingPlot.id },
+        ),
       });
       setMe(player);
       if (event) setCityEvents((current) => [event, ...current].slice(0, 12));
@@ -315,7 +318,7 @@ export default function ChessCity() {
       await refreshNeighborhoods();
       setPlacing(false);
       setDialog(null);
-      setMessage("Tu casa ya tiene dirección. Bienvenido a tu comunidad.");
+      setMessage("Tu casa ya tiene su lugar en ChessCity.");
     } catch (error) {
       setMessage((error as Error).message);
       await refreshNeighborhoods().catch(() => {});
@@ -334,6 +337,24 @@ export default function ChessCity() {
       );
     } catch (error) {
       setMessage((error as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function createCommunity(name: string) {
+    setBusy(true);
+    setMessage("");
+    try {
+      const { player } = await api<{ player: Player }>("/api/communities", {
+        method: "POST",
+        body: JSON.stringify({ name }),
+      });
+      upsert(player);
+      setMe(player);
+      await refreshNeighborhoods();
+      setMessage("Tu comunidad ya tiene nombre y un edificio fundador.");
+    } catch (e) {
+      setMessage((e as Error).message);
     } finally {
       setBusy(false);
     }
@@ -422,6 +443,7 @@ export default function ChessCity() {
           command={command}
           onSelect={setSelected}
           plots={neighborhoods.plots}
+          communities={neighborhoods.communities}
           events={cityEvents}
           placing={placing}
           onPlotSelect={pickPlot}
@@ -430,7 +452,8 @@ export default function ChessCity() {
       <div className="city-vignette" />
       {placing && (
         <div className="placement-banner" role="status">
-          Elige una parcela iluminada o usa la lista de comunidades.
+          Explora el terreno y pulsa donde quieras construir. La vista previa
+          indica si está libre.
           <button onClick={() => setDialog("communities")}>Ver lista</button>
           <button onClick={() => setPlacing(false)}>Terminar</button>
         </div>
@@ -650,9 +673,9 @@ export default function ChessCity() {
                 </button>
                 <p className="small muted">
                   {me?.plot
-                    ? NEIGHBORHOODS.find(
+                    ? (neighborhoods.communities.find(
                         (item) => item.id === me.plot!.communityId,
-                      )?.name
+                      )?.name ?? "Terreno libre · Puedes fundar tu comunidad")
                     : "Tu casa aún está en la zona de bienvenida."}
                 </p>
               </>
@@ -890,6 +913,7 @@ export default function ChessCity() {
                     camera("reset");
                   }}
                   onExpand={() => void expandCommunity()}
+                  onFound={(name) => void createCommunity(name)}
                   onContribute={(id, amount) => void contribute(id, amount)}
                 />
                 {message && <p role="status">{message}</p>}
@@ -901,6 +925,11 @@ export default function ChessCity() {
                   plot={pendingPlot}
                   me={me}
                   busy={busy}
+                  communityName={
+                    neighborhoods.communities.find(
+                      (c) => c.id === pendingPlot.communityId,
+                    )?.name
+                  }
                   onConfirm={() => void placeHouse()}
                 />
                 {message && <p role="alert">{message}</p>}
@@ -997,19 +1026,14 @@ export default function ChessCity() {
                 <label className="small" htmlFor="compare-player">
                   Elige otro jugador de la ciudad
                 </label>
-                <select
+                <CitySelect
                   id="compare-player"
                   value={compare}
-                  onChange={(event) => setCompare(event.target.value)}
-                >
-                  {ordered
+                  onChange={setCompare}
+                  options={ordered
                     .filter((item) => item.id !== selected.id)
-                    .map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.username}
-                      </option>
-                    ))}
-                </select>
+                    .map((item) => ({ value: item.id, label: item.username }))}
+                />
                 {compared && (
                   <div className="comparison">
                     {[selected, compared].map((item) => (

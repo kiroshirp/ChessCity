@@ -29,3 +29,7 @@ La prueba de integración con Stripe verifica los parámetros reales de Checkout
 También se verifica que una observación de pago atrasada no deshace un reembolso posterior; las observaciones de cobertura se ordenan por su instante de consulta.
 
 Comprobación publicada: la reserva real de verificación quedó `expired`, sin suscripciones reales creadas. Stripe entregó `checkout.session.expired` al webhook con respuesta HTTP 200. No se introdujo ninguna tarjeta ni se completó ningún pago real. Las pruebas de compilación de GitHub y Workers Builds finalizaron correctamente.
+
+## Colocación libre y estilo común
+
+42 pruebas automáticas: colocación sin lotes precargados, exclusión de plaza/límites, disputa de un mismo sitio, protección de posiciones antiguas no alineadas, fundación desde casa existente, cuatro reservas contiguas sin invadir otra casa, alquiler mensual repetido sin duplicación y traslado por vencimiento conservando XP. La migración aditiva también se ejecutó en D1 local. Se revisaron en navegador la selección en mapa, la confirmación sin vincular una cuenta, el desplegable común y Escape manteniendo la ventana abierta. Los datos del selector fueron exclusivamente una fixture local, sin pagos ni usuarios reales.
