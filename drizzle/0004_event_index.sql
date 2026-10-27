@@ -1,0 +1,1 @@
+CREATE INDEX `city_events_created_at` ON `city_events` (`created_at`);

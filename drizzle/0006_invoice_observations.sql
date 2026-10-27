@@ -1,0 +1,1 @@
+ALTER TABLE `rental_invoices` ADD `observed_at` integer DEFAULT 0 NOT NULL;
