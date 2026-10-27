@@ -12,7 +12,13 @@ import {
   type Mode,
 } from "../lib/model";
 import { buildingStage } from "../lib/progression";
-import { NEIGHBORHOODS, type Plot } from "../lib/neighborhoods";
+import { type Community, type Plot } from "../lib/neighborhoods";
+import {
+  LAND_LIMIT,
+  snapSite,
+  siteAvailable,
+  sitePlot,
+} from "../lib/open-land";
 
 import { createCityAnimation } from "./city-animation";
 import type { CityEvent } from "../lib/city-events";
@@ -25,6 +31,7 @@ interface Props {
   command: { name: string; id: number };
   onSelect: (player: Player) => void;
   plots: Plot[];
+  communities: Community[];
   events: CityEvent[];
   placing: boolean;
   onPlotSelect: (plot: Plot) => void;
@@ -38,6 +45,7 @@ export default function CityViewport({
   command,
   onSelect,
   plots,
+  communities,
   events,
   placing,
   onPlotSelect,
@@ -54,6 +62,11 @@ export default function CityViewport({
   const plotClickRef = useRef(onPlotSelect);
   plotClickRef.current = onPlotSelect;
   const [error, setError] = useState(false);
+  const [siteHint, setSiteHint] = useState("");
+  const viewState = useRef<{
+    position: THREE.Vector3;
+    target: THREE.Vector3;
+  } | null>(null);
 
   useEffect(() => {
     if (!host.current) return;
@@ -77,16 +90,20 @@ export default function CityViewport({
     container.appendChild(renderer.domElement);
     const layout = createLayout(players, mode);
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(39, 1, 0.5, 4000);
+    const camera = new THREE.PerspectiveCamera(39, 1, 0.5, 12000);
     camera.position.set(225, 190, 250);
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.09;
     controls.minDistance = 35;
-    controls.maxDistance = 1600;
+    controls.maxDistance = 6000;
     controls.maxPolarAngle = Math.PI * 0.47;
     controls.minPolarAngle = 0.2;
     controls.target.set(0, 12, 0);
+    if (viewState.current) {
+      camera.position.copy(viewState.current.position);
+      controls.target.copy(viewState.current.target);
+    }
     const materials: THREE.Material[] = [];
     const geometries: THREE.BufferGeometry[] = [];
     const material = (color: string) => {
@@ -126,7 +143,7 @@ export default function CityViewport({
     const lightMat = new THREE.MeshBasicMaterial({ color: "#e6c486" });
     materials.push(lightMat);
     const worldExtent = Math.max(
-      500,
+      LAND_LIMIT * 2 + 32,
       ...[...layout, ...plots].flatMap((b) => [
         Math.abs(b.x) * 2 + 100,
         Math.abs(b.z) * 2 + 100,
@@ -134,9 +151,22 @@ export default function CityViewport({
     );
     box(0, -1.2, 0, worldExtent, 2, worldExtent, groundMat);
     const roadRadius = Math.ceil(worldExtent / 32);
+    const roads = new THREE.InstancedMesh(
+      boxGeometry,
+      roadMat,
+      (roadRadius * 2 + 1) * 2,
+    );
+    const roadTransform = new THREE.Object3D();
+    let roadIndex = 0;
     for (let n = -roadRadius; n <= roadRadius; n++) {
-      box(n * 16 + 8, 0.05, 0, 3, 0.12, worldExtent, roadMat);
-      box(0, 0.06, n * 16 + 8, worldExtent, 0.12, 3, roadMat);
+      roadTransform.position.set(n * 16 + 8, 0.05, 0);
+      roadTransform.scale.set(3, 0.12, worldExtent);
+      roadTransform.updateMatrix();
+      roads.setMatrixAt(roadIndex++, roadTransform.matrix);
+      roadTransform.position.set(0, 0.06, n * 16 + 8);
+      roadTransform.scale.set(worldExtent, 0.12, 3);
+      roadTransform.updateMatrix();
+      roads.setMatrixAt(roadIndex++, roadTransform.matrix);
       for (let p = -13; p <= 13; p++) {
         if (Math.abs(n) <= 6 && Math.abs(p) <= 6 && (n + p) % 7 === 0) {
           box(n * 16 + 5.8, 1.7, p * 16 + 5.8, 0.22, 3.4, 0.22, curbMat);
@@ -146,6 +176,8 @@ export default function CityViewport({
           box(n * 16 + 8, 0.15, p * 16, 0.12, 0.03, 1.6, darkGold);
       }
     }
+    roads.instanceMatrix.needsUpdate = true;
+    scene.add(roads);
     box(0, 0.2, 0, 38, 0.4, 38, curbMat);
     box(0, 0.45, 0, 34, 0.2, 34, parkMat);
     // A chess plaza, deliberately distinct from Git City's developer monuments.
@@ -222,16 +254,40 @@ export default function CityViewport({
       plotMeshes.setMatrixAt(index, plotTransform.matrix);
     });
     plotMeshes.instanceMatrix.needsUpdate = true;
-    scene.add(plotMeshes);
+    if (placing && freePlots.length) scene.add(plotMeshes);
+    const ghostMat = new THREE.MeshBasicMaterial({
+      color: "#92e2bf",
+      transparent: true,
+      opacity: 0.55,
+      depthWrite: false,
+    });
+    materials.push(ghostMat);
+    const ghost = new THREE.Group();
+    const ghostBody = new THREE.Mesh(boxGeometry, ghostMat);
+    ghostBody.scale.set(8, 5, 8);
+    ghostBody.position.y = 3;
+    ghost.add(ghostBody);
+    const ghostRoofGeo = new THREE.ConeGeometry(6.5, 3, 4);
+    geometries.push(ghostRoofGeo);
+    const ghostRoof = new THREE.Mesh(ghostRoofGeo, ghostMat);
+    ghostRoof.position.y = 7;
+    ghostRoof.rotation.y = Math.PI / 4;
+    ghost.add(ghostRoof);
+    scene.add(ghost);
+    ghost.visible = false;
     const labelTextures: THREE.Texture[] = [];
-    for (const community of NEIGHBORHOODS) {
+    for (const community of communities) {
+      const anchor = plots.find(
+        (p) => p.communityId === community.id && p.ownerId,
+      );
+      if (!anchor) continue;
       const canvas = document.createElement("canvas");
       canvas.width = 512;
       canvas.height = 96;
       const context = canvas.getContext("2d")!;
       context.fillStyle = "rgba(10,30,36,.85)";
       context.fillRect(0, 0, 512, 96);
-      context.fillStyle = community.color;
+      context.fillStyle = "#e6dfcf";
       context.font = "500 35px sans-serif";
       context.textAlign = "center";
       context.fillText(community.name.toUpperCase(), 256, 58);
@@ -244,7 +300,11 @@ export default function CityViewport({
       });
       materials.push(labelMat);
       const sprite = new THREE.Sprite(labelMat);
-      sprite.position.set(community.x, 5, community.z - 36);
+      sprite.position.set(
+        community.x ?? anchor.x,
+        5,
+        (community.z ?? anchor.z) - 18,
+      );
       sprite.scale.set(40, 7.5, 1);
       scene.add(sprite);
     }
@@ -281,7 +341,7 @@ export default function CityViewport({
         col*=vNormal.z>.5?1.:vNormal.x>.5?.68:.86;
         if(abs(vNormal.y)>.5)col=mix(vec3(.12,.21,.25),vAccent,.17);
         col=mix(col,col*1.35+vec3(.08),uDay);
-        gl_FragColor=vec4(mix(col,uFog,smoothstep(360.,620.,vDepth)),1.);}`,
+        gl_FragColor=vec4(mix(col,uFog,smoothstep(1400.,7000.,vDepth)),1.);}`,
     });
     materials.push(shader);
     geometry.setAttribute(
@@ -417,6 +477,41 @@ export default function CityViewport({
     scene.add(sun);
     const ray = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
+    const landPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const landPoint = new THREE.Vector3();
+    const candidate = (event: PointerEvent) => {
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointer.set(
+        ((event.clientX - rect.left) / rect.width) * 2 - 1,
+        (-(event.clientY - rect.top) / rect.height) * 2 + 1,
+      );
+      ray.setFromCamera(pointer, camera);
+      if (!ray.ray.intersectPlane(landPlane, landPoint)) return null;
+      const rental = freePlots.find(
+        (p) =>
+          Math.abs(p.x - landPoint.x) < 7 && Math.abs(p.z - landPoint.z) < 7,
+      );
+      if (rental) return rental;
+      const point = snapSite(landPoint.x, landPoint.z);
+      return sitePlot(point.x, point.z);
+    };
+    const move = (event: PointerEvent) => {
+      if (!placing) return;
+      const point = candidate(event);
+      ghost.visible = !!point;
+      if (!point) return;
+      const valid =
+        !point.id.startsWith("site:") || siteAvailable(point.x, point.z, plots);
+      ghost.position.set(point.x, 0, point.z);
+      ghostMat.color.set(valid ? "#92e2bf" : "#df8284");
+      renderer.domElement.style.cursor = valid ? "crosshair" : "not-allowed";
+      setSiteHint(
+        valid
+          ? `Aquí puedes construir · ${point.x}, ${point.z}`
+          : "Sitio ocupado, reservado o fuera del terreno edificable",
+      );
+      schedule();
+    };
     let downPoint: { x: number; y: number } | null = null;
     const down = (event: PointerEvent) => {
       downPoint = { x: event.clientX, y: event.clientY };
@@ -437,10 +532,13 @@ export default function CityViewport({
       );
       ray.setFromCamera(pointer, camera);
       if (placing) {
-        const plotHit = ray.intersectObject(plotMeshes)[0];
-        if (plotHit?.instanceId !== undefined) {
-          plotClickRef.current(freePlots[plotHit.instanceId]);
-        }
+        const point = candidate(event);
+        if (
+          point &&
+          (!point.id.startsWith("site:") ||
+            siteAvailable(point.x, point.z, plots))
+        )
+          plotClickRef.current(point);
         return;
       }
       const hit = ray.intersectObject(buildings)[0];
@@ -449,6 +547,7 @@ export default function CityViewport({
     };
     renderer.domElement.addEventListener("pointerdown", down);
     renderer.domElement.addEventListener("pointerup", up);
+    renderer.domElement.addEventListener("pointermove", move);
     let request = 0,
       last = 0,
       disposed = false;
@@ -572,7 +671,7 @@ export default function CityViewport({
       },
       theme(light) {
         scene.background = new THREE.Color(light ? "#8faaa9" : "#0a1826");
-        scene.fog = new THREE.Fog(light ? "#8faaa9" : "#0a1826", 360, 650);
+        scene.fog = new THREE.Fog(light ? "#8faaa9" : "#0a1826", 1400, 7000);
         shader.uniforms.uFog.value.set(light ? "#8faaa9" : "#0a1826");
         shader.uniforms.uDay.value = light ? 1 : 0;
         ambient.intensity = light ? 3 : 2.3;
@@ -584,6 +683,10 @@ export default function CityViewport({
     api.current.theme(daylight);
     resize();
     return () => {
+      viewState.current = {
+        position: camera.position.clone(),
+        target: controls.target.clone(),
+      };
       disposed = true;
       cancelAnimationFrame(request);
       observer.disconnect();
@@ -598,7 +701,7 @@ export default function CityViewport({
       renderer.domElement.remove();
       api.current = null;
     };
-  }, [players, mode, plots, placing, events]);
+  }, [players, mode, plots, communities, placing, events]);
   useEffect(
     () => api.current?.focus(selected),
     [selected, players, mode, plots, placing, events],
@@ -611,6 +714,11 @@ export default function CityViewport({
       ref={host}
       aria-label="Ciudad 3D de ajedrecistas"
     >
+      {placing && siteHint && (
+        <div className="placement-hint" role="status">
+          {siteHint}
+        </div>
+      )}
       {error && (
         <div className="webgl-error">
           <h2>La ciudad necesita WebGL 2</h2>

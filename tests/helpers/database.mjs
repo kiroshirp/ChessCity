@@ -7,7 +7,7 @@ export function fixture() {
     .sort())
     sql.exec(readFileSync(`drizzle/${file}`, "utf8"));
   sql.exec(
-    "INSERT INTO communities VALUES ('alameda','Alameda',16); INSERT INTO expansions (id,community_id,created_at) VALUES ('alameda:16','alameda',0)",
+    "INSERT INTO communities (id,name,capacity) VALUES ('alameda','Alameda',16); INSERT INTO expansions (id,community_id,created_at) VALUES ('alameda:16','alameda',0)",
   );
   const db = {
     prepare(query) {

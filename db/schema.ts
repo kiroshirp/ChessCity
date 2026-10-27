@@ -32,6 +32,9 @@ export const communities = sqliteTable("communities", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   capacity: integer("capacity").notNull().default(16),
+  founderId: text("founder_id").unique(),
+  originX: integer("origin_x"),
+  originZ: integer("origin_z"),
 });
 export const plots = sqliteTable(
   "plots",

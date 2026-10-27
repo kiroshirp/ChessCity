@@ -18,19 +18,21 @@ Vincular una cuenta inicializa su contador sin recompensar el historial. Posteri
 | Bloque residencial   |        800 |                   14 |
 | Edificio emblemático |       1800 |                   30 |
 
-Se exigen ambos mínimos. El rating no cambia la altura. Jardín desde la segunda etapa; corona desde la cuarta. Estas cifras y los nombres de las tres comunidades son decisiones de implementación, pendientes de equilibrio con uso real.
+Se exigen ambos mínimos. El rating no cambia la altura. Jardín desde la segunda etapa; corona desde la cuarta. Estas cifras son decisiones de implementación, pendientes de equilibrio con uso real. Los jugadores eligen el nombre y la ubicación de sus comunidades.
 
 ## Parcelas y ampliaciones
 
-Ciudad abierta ofrece 256 parcelas públicas iniciales, sin alquiler. Cuando quedan menos de 64 libres, el servidor añade otro bloque de 256 direcciones permanentes. El terreno y las calles se adaptan a su extensión. No se añaden jugadores ni edificios ficticios. Las direcciones públicas respetan la plaza y todo el espacio reservado para las futuras ampliaciones de las comunidades.
+El terreno público está vacío: se elige un punto libre del mapa, se muestra una casa de vista previa y se confirma antes de guardar. No se precargan parcelas ni comunidades. La colocación se ajusta internamente a calles de 16 unidades para evitar solapamientos; el área urbanizable actual abarca ±2048 unidades por eje, fuera de la plaza central. También se puede elegir por coordenadas con teclado. El servidor confirma disponibilidad de forma transaccional; los registros históricos vacíos no bloquean el terreno.
 
-Alameda, El Mirador y La Ribera tienen 16 parcelas iniciales cada una. Elegir o cambiar a una parcela libre es gratuito. La dirección elegida es persistente, con ocupación exclusiva protegida en base de datos. Un perfil sin parcela no aparece como edificio en la ciudad. El terreno público permite seguir jugando sin tener que alquilar una ampliación de club.
+Un jugador con casa puede fundar gratuitamente una comunidad con nombre alrededor de su edificio. Empieza con una única dirección, la del fundador. El edificio fundador mantiene su ubicación. Para reunir al club o escuela, cada ampliación reserva cuatro sitios próximos libres y cuesta **1 €/mes en total**. Solo se muestran como plazas disponibles tras verificar el pago. Se conserva el límite de 64 direcciones por comunidad en esta versión (las ampliaciones se añaden de cuatro en cuatro).
 
-Solo miembros pueden solicitar ampliar su comunidad. Una solicitud por tramo, alquiler conjunto de 100 céntimos al mes y 4 parcelas adicionales, máximo 64 por comunidad en esta versión. Stripe está preparado con el producto `prod_U4PzEucod6LCRJ`, pero los cobros permanecen desactivados hasta completar la conciliación mensual y configurar secretos. Una persona o club puede asumir 1 €/mes, o dos personas 0,50 €/mes cada una. El servidor reserva los importes pendientes para que varios participantes no superen el objetivo de 1 €. La vuelta desde Stripe no acredita fondos: el webhook firmado y la consulta a Stripe verifican sesión, producto, importe, moneda y destinatario.
+Una persona puede asumir 1 €/mes, o dos personas 0,50 €/mes cada una. El servidor limita los importes pendientes y suscritos al objetivo conjunto. Las comunidades y suscripciones existentes son compatibles. La nueva migración solo añade campos e índices: no borra, desactiva ni desplaza datos de producción. Los antiguos lotes vacíos se excluyen mediante consultas, conservando los registros originales.
+
+Los formularios, campos, validaciones y menús de selección usan los colores carbón/marfil, bordes y relieve de la web. Los selectores se comparten en `CitySelect` y admiten teclado, lectores de pantalla y Escape sin cerrar la ventana que los contiene.
 
 ## Límites
 
-No están implementados emisión automática de reembolsos, tienda, jardines decorables ni compra de cosméticos. Los reembolsos y disputas comunicados por Stripe sí bloquean/restablecen la cobertura correspondiente tras verificarla. Antes de activar cobros hay que completar una prueba integral con Stripe, incluyendo devoluciones y recuperación de reservas ambiguas. La conexión de ChatGPT con Stripe no proporciona credenciales al Worker. El límite visual sigue siendo 250 perfiles recientes; no equivale a validar una ciudad masiva. La ciudad no se rellena con edificios ficticios. Solo se representa a propietarios verificados con parcela elegida. Buscar un perfil o vincular una cuenta sin elegir parcela no construye una casa.
+No están implementados emisión automática de reembolsos, tienda, jardines decorables ni compra de cosméticos. Los reembolsos y disputas comunicados por Stripe sí bloquean/restablecen la cobertura correspondiente tras verificarla. La integración mensual está verificada con la API de prueba de Stripe; no se ha realizado ningún cobro real de verificación. La conexión de ChatGPT con Stripe no proporciona credenciales al Worker. El límite visual sigue siendo 250 perfiles recientes; no equivale a validar una ciudad masiva. La ciudad no se rellena con edificios ficticios. Solo se representa a propietarios verificados con parcela elegida. Buscar un perfil o vincular una cuenta sin elegir parcela no construye una casa.
 
 ## Alquileres para escuelas y clubes
 
@@ -38,4 +40,4 @@ La ampliación permite reunir alumnos o miembros en una misma comunidad. Al venc
 
 El cambio se representa con bola de demolición en el lugar anterior y obra en el destino gratuito. Elegir parcela muestra operarios, andamios y grúa; subir de etapa anima la mejora. Estas escenas duran nueve segundos y respetan la preferencia de movimiento reducido. No se activan con datos inventados ni llenan una ciudad vacía.
 
-La infraestructura de vencimientos usa fechas del servidor y registra eventos idempotentes. La conciliación automática de facturas y renovaciones de Stripe está implementada y probada con datos aislados, pero no con un sandbox del proveedor; `RENTAL_LIFECYCLE_READY=false` impide abrir cobros incluso si se añaden claves. No se está vendiendo un alquiler sin seguimiento mensual fiable.
+La infraestructura de vencimientos usa fechas del servidor y registra eventos idempotentes. Los cobros están habilitados con secretos cifrados en Cloudflare y avisos firmados de Stripe. La validación detallada está en `docs/VALIDACION.md`.

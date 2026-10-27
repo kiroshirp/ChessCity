@@ -43,6 +43,9 @@ export interface Community {
   name: string;
   capacity: number;
   occupied: number;
+  founderId?: string | null;
+  x?: number | null;
+  z?: number | null;
 }
 export interface Expansion {
   id: string;

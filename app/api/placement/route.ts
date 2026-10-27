@@ -1,4 +1,5 @@
 import { queueConstruction } from "../../../lib/city-events";
+import { claimSite, LandError } from "../../../lib/open-land";
 import {
   ApiError,
   database,
@@ -23,21 +24,47 @@ export async function POST(request: Request) {
     } catch {
       throw new ApiError("Petición no válida.");
     }
+    if (!body || typeof body !== "object" || Array.isArray(body))
+      throw new ApiError("Petición no válida.");
+    if ("x" in body || "z" in body) {
+      const previous = await findPlayer(user.player_id);
+      try {
+        await claimSite(database(), user.player_id, body.x, body.z);
+      } catch (e) {
+        if (e instanceof LandError) throw new ApiError(e.message, 409);
+        throw e;
+      }
+      const player = (await findPlayer(user.player_id))!;
+      const event =
+        previous?.plot?.id !== player.plot?.id
+          ? await queueConstruction(database(), player, "construction")
+          : null;
+      return json({ player, event });
+    }
     if (
       !body ||
       typeof body.plotId !== "string" ||
-      !/^(alameda|mirador|ribera|libre|abierta):\d{1,6}$/.test(body.plotId)
+      !/^[a-z0-9:_-]{1,100}$/i.test(body.plotId)
     )
       throw new ApiError("Parcela no válida.");
     const plot = await database()
       .prepare(
-        "SELECT l.id FROM plots l LEFT JOIN expansions e ON e.id=l.rental_expansion_id WHERE l.id=? AND (l.rental_expansion_id IS NULL OR (e.status='applied' AND e.rent_paid_until>?))",
+        "SELECT l.id FROM plots l JOIN expansions e ON e.id=l.rental_expansion_id WHERE l.id=? AND e.status='applied' AND e.rent_paid_until>?",
       )
       .bind(body.plotId, Date.now())
       .first();
     if (!plot)
       throw new ApiError("Esta parcela todavía no está desbloqueada.", 409);
     const previous = await findPlayer(user.player_id);
+    const founder = await database()
+      .prepare("SELECT id FROM communities WHERE founder_id=?")
+      .bind(user.player_id)
+      .first();
+    if (founder)
+      throw new ApiError(
+        "El edificio fundador mantiene la ubicación de su comunidad.",
+        409,
+      );
     const result = await database()
       .prepare(
         `UPDATE players SET plot_id=? WHERE id=? AND claimed=1

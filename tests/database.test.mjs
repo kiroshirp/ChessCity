@@ -3,61 +3,6 @@ import { demolishExpiredRentals } from "../.sites-runtime/tests/city-events.mjs"
 import test from "node:test";
 import assert from "node:assert/strict";
 import { reserveContribution } from "../.sites-runtime/tests/checkout-store.mjs";
-import {
-  ensurePublicLand,
-  publicPlotCoordinates,
-} from "../.sites-runtime/tests/public-land.mjs";
-import {
-  NEIGHBORHOODS,
-  plotCoordinates,
-} from "../.sites-runtime/tests/neighborhoods.mjs";
-
-test("public land grows without moving addresses or occupying community expansion space", async () => {
-  const { sql, db } = fixture();
-  const points = publicPlotCoordinates(0, 512);
-  assert.deepEqual(publicPlotCoordinates(256, 256), points.slice(256));
-  assert.equal(new Set(points.map((p) => `${p.x}:${p.z}`)).size, 512);
-  for (const point of points)
-    for (const community of NEIGHBORHOODS)
-      for (let slot = 0; slot < 64; slot++) {
-        const reserved = plotCoordinates(community.id, slot);
-        assert.ok(
-          Math.abs(point.x - reserved.x) >= 15 ||
-            Math.abs(point.z - reserved.z) >= 15,
-        );
-      }
-  await ensurePublicLand(db);
-  await ensurePublicLand(db);
-  assert.equal(
-    sql
-      .prepare("SELECT COUNT(*) n FROM plots WHERE community_id='abierta'")
-      .get().n,
-    256,
-  );
-  assert.equal(sql.prepare("SELECT COUNT(*) n FROM players").get().n, 0);
-  for (let i = 0; i < 193; i++)
-    sql
-      .prepare(
-        "INSERT INTO players (id,username,profile,updated_at,claimed,plot_id) VALUES (?,?, '{}',0,1,?)",
-      )
-      .run(`p${i}`, `Player${i}`, `abierta:${i}`);
-  await ensurePublicLand(db);
-  assert.equal(
-    sql.prepare("SELECT capacity FROM communities WHERE id='abierta'").get()
-      .capacity,
-    512,
-  );
-  const address = sql
-    .prepare("SELECT x,z FROM plots WHERE id='abierta:0'")
-    .get();
-  assert.equal(address.x, points[0].x);
-  assert.equal(address.z, points[0].z);
-  assert.equal(
-    sql.prepare("SELECT plot_id FROM players WHERE id='p0'").get().plot_id,
-    "abierta:0",
-  );
-  sql.close();
-});
 test("a plot has at most one owner and moving releases the old address", () => {
   const { sql } = fixture();
   sql.exec(
